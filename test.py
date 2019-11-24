@@ -1,3 +1,4 @@
+'''
 import pygame
 pygame.init()
 
@@ -195,3 +196,9 @@ while run:
     redrawGameWindow()
 
 pygame.quit()
+'''
+
+x, y, z = 1, 2, 3
+print(x)
+print(y)
+print(z)

@@ -47,3 +47,5 @@ def webScraping(url): #pass in the url of yahoo finance as a string
         data.append(infoDict)
 
     return data
+
+# trending stock: 'https://finance.yahoo.com/trending-tickers'

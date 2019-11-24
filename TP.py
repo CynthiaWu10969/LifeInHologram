@@ -14,6 +14,7 @@ class Character(object):
         self.walkCount = walkCount
         self.speed = speed
         self.stand = stand
+        self.hitbox = (self.x, self.y, width, height)
 
 class Background(object):
     def __init__(self, image, name):
@@ -27,15 +28,19 @@ class Item(object):
         self.image = pygame.transform.scale(self.image, (width, height))
         self.name = name
         self.x, self.y = x, y
+        self.hitbox = (self.x , self.y , width, height)
 
 class PlayGame(object):
     def __init__(self, width, height):
         self.width = width
         self.height = height
         self.protagonist = self.createCharacter()
-        self.item1 = None
         self.streetBackground = Background('street.png', 'street')
-        self.home = self.createItems()
+        self.home, self.bank, self.market = None, None, None
+        self.workplace, self.park = None, None
+        self.createItems()
+        self.itemList = [self.home, self.bank, self.market, 
+                        self.workplace, self.park]
 
     def createCharacter(self):
         walkRight = [pygame.image.load('R1.png'), pygame.image.load('R2.png'), 
@@ -55,12 +60,21 @@ class PlayGame(object):
         stand = pygame.transform.scale(pygame.image.load('stand.png'),
                                             (30, 45))
         walkCount = 0
-        return Character(250, 250, walkRight, walkLeft, walkFront, walkBack, 
-                        stand, 30, 30, walkCount, 10)
-
-    def createItems(self):
-        return Item('home.png', 100, 100, 150, 50, 'home')
+        return Character(self.width//2, self.height//2, walkRight, walkLeft, 
+                        walkFront, walkBack, stand, 30, 45, walkCount, 10)
     
+    def createItems(self):
+        self.home = Item('home.png', self.width//6, self.height//4, 150, 50, 
+                        'home')
+        self.bank = Item('bank.png', 5*self.width//6, 5*self.height//24, 80, 
+                        64,'bank')
+        self.market = Item('market.png', 7*self.width//24, 23*self.height//40, 
+                            100, 100, 'market')
+        self.park = Item('park.png', 19*self.width//32, 7*self.height//12, 
+                            100, 100, 'park')
+        self.workplace = Item('workplace.png', 5*self.width//6, 
+                                7*self.height//12, 75, 100, 'workplace')
+
     def drawProtagonist(self, surface, moveL, moveR, moveB, moveF):
         if self.protagonist.walkCount == 4:
             self.protagonist.walkCount = 0
@@ -84,9 +98,15 @@ class PlayGame(object):
         else:
             surface.blit(self.protagonist.stand,
                     (self.protagonist.x, self.protagonist.y))
+        self.protagonist.hitbox=(self.protagonist.x, self.protagonist.y, 
+                                self.protagonist.width, 
+                                self.protagonist.height)
+        pygame.draw.rect(surface, (255, 0, 0), self.protagonist.hitbox, 2)
 
     def drawItem(self, surface):
-        surface.blit(self.home.image, (self.home.x, self.home.y))
+        for item in self.itemList:
+            surface.blit(item.image, (item.x, item.y))
+            pygame.draw.rect(surface, (255, 0, 0), item.hitbox, 2)
 
     def redrawGameWindow(self, surface, moveL, moveR, moveF, moveB):
         surface.blit(self.streetBackground.image, 
@@ -133,8 +153,8 @@ class PlayGame(object):
     def runGame(self):
 
         pygame.init()
-        surface = pygame.display.set_mode((self.width,self.height))
-        pygame.display.set_caption("First Game")
+        surface = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption("Main Street")
         clock = pygame.time.Clock()
 
         #mainloop

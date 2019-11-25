@@ -15,6 +15,7 @@ class Character(object):
         self.speed = speed
         self.stand = stand
         self.hitbox = (self.x, self.y, width, height)
+        self.isCollide = False
 
 class Background(object):
     def __init__(self, image, name):
@@ -64,60 +65,69 @@ class PlayGame(object):
                         walkFront, walkBack, stand, 30, 45, walkCount, 10)
     
     def createItems(self):
-        self.home = Item('home.png', self.width//6, self.height//4, 150, 50, 
+        self.home = Item('home.png', self.width//6, self.height//4+7, 150, 50, 
                         'home')
-        self.bank = Item('bank.png', 5*self.width//6, 5*self.height//24, 80, 
+        self.bank = Item('bank.png', 5*self.width//6, 5*self.height//24+10, 80, 
                         64,'bank')
-        self.market = Item('market.png', 7*self.width//24, 23*self.height//40, 
+        self.market = Item('market.png', 7*self.width//24, 23*self.height//40+7, 
                             100, 100, 'market')
-        self.park = Item('park.png', 19*self.width//32, 7*self.height//12, 
+        self.park = Item('park.png', 19*self.width//32, 7*self.height//12+5, 
                             100, 100, 'park')
         self.workplace = Item('workplace.png', 5*self.width//6, 
-                                7*self.height//12, 75, 100, 'workplace')
+                                7*self.height//12+5, 75, 100, 'workplace')
 
-    def drawProtagonist(self, surface, moveL, moveR, moveB, moveF):
-        if self.protagonist.walkCount == 4:
-            self.protagonist.walkCount = 0
-
-        if self.protagonist.left and moveL:
-            surface.blit(self.protagonist.walkLeft[self.protagonist.walkCount], 
-                    (self.protagonist.x, self.protagonist.y))
-            self.protagonist.walkCount += 1
-        elif self.protagonist.right and moveR:
-            surface.blit(self.protagonist.walkRight[self.protagonist.walkCount], 
-                    (self.protagonist.x, self.protagonist.y))
-            self.protagonist.walkCount +=1
-        elif self.protagonist.front and moveF:
-            surface.blit(self.protagonist.walkFront[self.protagonist.walkCount], 
-                    (self.protagonist.x, self.protagonist.y))
-            self.protagonist.walkCount +=1
-        elif self.protagonist.back and moveB:
-            surface.blit(self.protagonist.walkBack[self.protagonist.walkCount], 
-                    (self.protagonist.x, self.protagonist.y))
-            self.protagonist.walkCount +=1
+    def detectCollision(self): #hitbox: (left top)x, y, width, height 
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.market.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.market.hitbox[0] + self.market.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.market.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.market.hitbox[1] + self.market.hitbox[3])):
+            self.protagonist.isCollide = True
         else:
-            surface.blit(self.protagonist.stand,
-                    (self.protagonist.x, self.protagonist.y))
+            self.protagonist.isCollide = False
+
+    def drawProtagonist(self, stSurface, moveL, moveR, moveB, moveF):
+        if self.protagonist.isCollide:
+            stSurface.blit(self.protagonist.stand, 
+                        (self.protagonist.x, self.protagonist.y))
+        else:
+            if self.protagonist.walkCount == 4:
+                self.protagonist.walkCount = 0
+            if self.protagonist.left and moveL:
+                stSurface.blit(self.protagonist.walkLeft[self.protagonist.walkCount], 
+                        (self.protagonist.x, self.protagonist.y))
+                self.protagonist.walkCount += 1
+            elif self.protagonist.right and moveR:
+                stSurface.blit(self.protagonist.walkRight[self.protagonist.walkCount], 
+                        (self.protagonist.x, self.protagonist.y))
+                self.protagonist.walkCount +=1
+            elif self.protagonist.front and moveF:
+                stSurface.blit(self.protagonist.walkFront[self.protagonist.walkCount], 
+                        (self.protagonist.x, self.protagonist.y))
+                self.protagonist.walkCount +=1
+            elif self.protagonist.back and moveB:
+                stSurface.blit(self.protagonist.walkBack[self.protagonist.walkCount], 
+                        (self.protagonist.x, self.protagonist.y))
+                self.protagonist.walkCount +=1
+            else:
+                stSurface.blit(self.protagonist.stand,
+                        (self.protagonist.x, self.protagonist.y))
         self.protagonist.hitbox=(self.protagonist.x, self.protagonist.y, 
                                 self.protagonist.width, 
                                 self.protagonist.height)
-        pygame.draw.rect(surface, (255, 0, 0), self.protagonist.hitbox, 2)
+        pygame.draw.rect(stSurface, (255, 0, 0), self.protagonist.hitbox, 2)
 
-    def drawItem(self, surface):
+    def drawItem(self, stSurface):
         for item in self.itemList:
-            surface.blit(item.image, (item.x, item.y))
-            pygame.draw.rect(surface, (255, 0, 0), item.hitbox, 2)
+            stSurface.blit(item.image, (item.x, item.y))
+            pygame.draw.rect(stSurface, (255, 0, 0), item.hitbox, 2)
 
-    def redrawGameWindow(self, surface, moveL, moveR, moveF, moveB):
-        surface.blit(self.streetBackground.image, 
-                    (0, 0))
+    def redrawGameWindow(self, stSurface, moveL, moveR, moveF, moveB):
+        stSurface.blit(self.streetBackground.image, (0, 0))
 
-        self.drawItem(surface)
-        self.drawProtagonist(surface, moveL, moveR, moveF, moveB)
+        self.drawItem(stSurface)
+        self.drawProtagonist(stSurface, moveL, moveR, moveF, moveB)
         
         pygame.display.update()
 
-    def detectKeyPressed(self, keys):
+    def moveProtagonist(self, keys):
         if (keys[pygame.K_LEFT] and 
             self.protagonist.x > self.protagonist.speed):
             self.protagonist.x -= self.protagonist.speed
@@ -150,10 +160,41 @@ class PlayGame(object):
 
         return moveL, moveR, moveF, moveB
 
-    def runGame(self):
+    def cancelMove(self, direction):
+        if direction == 'left':
+            self.protagonist.x += 1
+        if direction == 'right':
+            self.protagonist.x -= 1
+        if direction == 'front':
+            self.protagonist.y -= 1
+        if direction == 'back':
+            self.protagonist.y += 1
 
+    def detectKeyPressed(self, keys):
+        moveL, moveR, moveF, moveB = self.moveProtagonist(keys)
+        direction = None
+
+        return moveL, moveR, moveF, moveB
+
+    def checkDirectForCollision(self, moveL, moveR, moveF, moveB):
+        if moveL == True:
+            direction = 'left'
+        elif moveR == True:
+            direction = 'right'
+        elif moveF == True:
+            direction = 'front'
+        elif moveB == True:
+            direction = 'back'
+        else:
+            direction = None
+        print("current moving direction: ", direction)
+
+        if self.protagonist.isCollide:
+            self.cancelMove(direction)
+
+    def runGame(self):
         pygame.init()
-        surface = pygame.display.set_mode((self.width, self.height))
+        stSurface = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Main Street")
         clock = pygame.time.Clock()
 
@@ -168,8 +209,11 @@ class PlayGame(object):
 
             keys = pygame.key.get_pressed()
             (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
+            self.detectCollision()
+            print('is it colliding: ', self.protagonist.isCollide)
+            self.checkDirectForCollision(moveL, moveR, moveF, moveB)
                     
-            self.redrawGameWindow(surface, moveL, moveR, moveF, moveB)
+            self.redrawGameWindow(stSurface, moveL, moveR, moveF, moveB)
 
         pygame.quit()
 

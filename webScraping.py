@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 
-def webScraping(url): #pass in the url of yahoo finance as a string
+def scraping(url='https://finance.yahoo.com/most-active?count=25&offset=0'): #pass in the url of yahoo finance as a string
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'lxml')
 
@@ -17,35 +17,32 @@ def webScraping(url): #pass in the url of yahoo finance as a string
 
         #assign each information for each stock
         symbol = information[0].findAll(text=True)
-        infoDict['symbol'] = symbol[0]
+        infoDict['Symbol'] = symbol[0]
 
         stockName = information[1].findAll(text=True)
-        infoDict['name'] = stockName[0]
+        infoDict['Name'] = stockName[0]
 
         lastPrice = information[2].findAll(text=True)
-        infoDict['last price'] = lastPrice[0]
+        infoDict['Price'] = lastPrice[0]
 
         marketTime = information[3].findAll(text=True)
-        infoDict['market time'] = marketTime[0]
+        infoDict['Change'] = marketTime[0]
 
         change = information[4].findAll(text=True)
-        infoDict['change'] = change[0]
+        infoDict['% Change'] = change[0]
 
         percentChange = information[5].findAll(text=True)
-        infoDict['percent change'] = percentChange[0]
+        infoDict['Volume'] = percentChange[0]
 
         volume = information[6].findAll(text=True)
-        infoDict['volume'] = volume[0]
+        infoDict['avg volume'] = volume[0]
 
         avgVolume3Months = information[7].findAll(text=True)
-        infoDict['average volume (3 months)'] = avgVolume3Months[0]
-
-        marketCap = information[8].findAll(text=True)
-        infoDict['market capacity'] = marketCap[0]
+        infoDict['Market Cap'] = avgVolume3Months[0]
         
         #append to the overall list
         data.append(infoDict)
 
-    return data
+    return data[:6]
 
-# trending stock: 'https://finance.yahoo.com/trending-tickers'
+#print(scraping('https://finance.yahoo.com/most-active?count=25&offset=0'))

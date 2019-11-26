@@ -1,5 +1,6 @@
 import pygame
-#from webScraping.py import *
+import webScraping
+from tkinter import *
 
 class Character(object):
     def __init__(self, x, y, walkRight, walkLeft, walkFront, walkBack, stand, 
@@ -15,7 +16,7 @@ class Character(object):
         self.speed = speed
         self.stand = stand
         self.hitbox = (self.x, self.y, width, height)
-        self.isCollide = False
+        self.isCollide, self.isBuy, self.isSell = False, False, False
         self.inMarket = False
 
 class Background(object):
@@ -23,6 +24,22 @@ class Background(object):
         self.image = pygame.image.load(image)
         self.image = pygame.transform.scale(self.image, (600, 400))
         self.name = name
+
+class Buttons(object):
+    def __init__(self, image, x, y, width, height):
+        self.image = image
+        self.image = pygame.transform.scale(self.image, (width, height))
+        self.x, self.y = x, y
+        self.width, self.height = width, height
+    
+    def isClick(self, pos):
+        if pos[0] > self.x and pos[0] < self.x + self.width:
+            if pos[1] > self.y and pos[1] < self.y + self.height:
+                return True
+        return False
+
+    def drawButton(self, surface):
+        surface.blit(self.image, (self.x, self.y))
 
 class Item(object):
     def __init__(self, image, x, y, width, height, name):
@@ -48,6 +65,9 @@ class PlayGame(object):
         self.createMarketItems()
         self.marketItems = [self.buyDesk, self.sellDesk, self.buyIcon, 
                             self.sellIcon, self.marketIcon]
+        self.exitBuy, self.exitSell = False, False
+        #self.buyButtons, self.sellButtons = [], []
+        self.stockData = webScraping.scraping()
 
     def createCharacter(self):
         walkRight = [pygame.image.load('R1.png'), pygame.image.load('R2.png'), 
@@ -215,6 +235,68 @@ class PlayGame(object):
             marketSurface.blit(item.image, (item.x, item.y))
             pygame.draw.rect(marketSurface, (255, 0, 0), item.hitbox, 2)
 
+    def drawStockBuy(self, marketSurface):
+        colDis = (5 * self.width // 6 - self.width // 12) // 6
+        rowDis = (2 * self.height // 3 - self.height // 8) // 6
+
+        imageX = self.width // 12 + 2 * (5 * self.width//6 - self.width//12) // 5
+        imageY = self.height//8
+        marketImage = pygame.image.load('buy.png')
+        marketImage = pygame.transform.scale(marketImage, (100, 50))
+        marketSurface.blit(marketImage, (imageX, imageY))
+
+        font = pygame.font.SysFont('arial', 15, True)
+        stockInfo = ['Symbol', 'Price', 'Change', '% Change', 
+                    'Market Cap']
+        
+        for j in range(len(stockInfo)): # draws the table for stocks
+            for i in range(6):
+                if i == 0:
+                    text = font.render(stockInfo[j], 1, (0, 0, 0))
+                else:
+                    text = font.render(self.stockData[i-1][stockInfo[j]], 1, 
+                                    (0, 0, 0))
+                marketSurface.blit(text, (3*self.width//24 + colDis * j, 
+                                    2*self.height//8 + rowDis * i))
+
+    def drawBuyWindow(self, marketSurface):
+        rectangle = (self.width//12, self.height//8, 
+                    5*self.width//6, 2*self.height//3)
+        pygame.draw.rect(marketSurface, (0, 0, 0), rectangle, 5)
+        marketSurface.fill((255, 255, 255), rectangle)
+        self.drawStockBuy(marketSurface)
+
+    def drawStockSell(self, marketSurface):
+        colDis = (5 * self.width // 6 - self.width // 12) // 6
+        rowDis = (2 * self.height // 3 - self.height // 8) // 6
+
+        imageX = self.width // 12 + 2 * (5 * self.width//6 - self.width//12) // 5
+        imageY = self.height//8
+        marketImage = pygame.image.load('sell.png')
+        marketImage = pygame.transform.scale(marketImage, (100, 50))
+        marketSurface.blit(marketImage, (imageX, imageY))
+
+        font = pygame.font.SysFont('arial', 15, True)
+        stockInfo = ['Symbol', 'Price', 'Change', '% Change', 
+                    'Market Cap']
+        
+        for j in range(len(stockInfo)): # draws the table for stocks
+            for i in range(6):
+                if i == 0:
+                    text = font.render(stockInfo[j], 1, (0, 0, 0))
+                else:
+                    text = font.render(self.stockData[i-1][stockInfo[j]], 1, 
+                                    (0, 0, 0))
+                marketSurface.blit(text, (3*self.width//24 + colDis * j, 
+                                    2*self.height//8 + rowDis * i))
+
+    def drawSellWindow(self, marketSurface):
+        rectangle = (self.width//12, self.height//8, 
+                    5*self.width//6, 2*self.height//3)
+        pygame.draw.rect(marketSurface, (0, 0, 0), rectangle, 5)
+        marketSurface.fill((255, 255, 255), rectangle)
+        self.drawStockSell(marketSurface)
+
     def redrawMarketWindow(self, marketSurface, moveL, moveR, moveF, moveB):
         marketBgImage = pygame.image.load('marketBg.png')
         marketBgImage = pygame.transform.scale(marketBgImage, (self.width, 
@@ -224,10 +306,24 @@ class PlayGame(object):
         self.drawMarketItem(marketSurface)
         self.drawProtagonist(marketSurface, moveL, moveR, moveF, moveB)
 
+        if not self.exitBuy and self.protagonist.isBuy:
+            self.drawBuyWindow(marketSurface)
+        elif not self.exitSell and self.protagonist.isSell:
+            self.drawSellWindow(marketSurface)
+
         pygame.display.update()
 
     def marketDetectCollision(self):
-        self.protagonist.isCollide = False
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.buyDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.buyDesk.hitbox[0] + self.buyDesk.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.buyDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.buyDesk.hitbox[1] + self.buyDesk.hitbox[3])):
+            self.protagonist.isBuy, self.protagonist.isCollide = True, True
+            self.protagonist.isSell = False
+        elif ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.sellDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.sellDesk.hitbox[0] + self.sellDesk.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.sellDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.sellDesk.hitbox[1] + self.sellDesk.hitbox[3])):
+            self.protagonist.isSell, self.protagonist.isCollide = True, True
+            self.protagonist.isBuy = False    
+        else:
+            self.protagonist.isCollide = False
 
     def inMarketRunGame(self):
         marketSurface = pygame.display.set_mode((self.width, self.height))
@@ -240,14 +336,17 @@ class PlayGame(object):
             clock.tick(15)
 
             for event in pygame.event.get():
+                position = pygame.mouse.get_pos()
+
                 if event.type == pygame.QUIT:
                     run = False
+                #if event.type == MOUSEBUTTONDOWN:
+                    #pass
 
             keys = pygame.key.get_pressed()
             (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
 
             self.marketDetectCollision()
-            print('is it colliding: ', self.protagonist.isCollide)
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
 
             self.redrawMarketWindow(marketSurface, moveL, moveR, moveF, moveB)
@@ -283,3 +382,4 @@ class PlayGame(object):
         pygame.quit()
 
 PlayGame(600, 400).runGame()
+

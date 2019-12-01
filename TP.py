@@ -21,10 +21,12 @@ class PlayGame(object):
         self.createMarketItems()
         self.marketItems = [self.buyDesk, self.sellDesk, self.buyIcon, 
                             self.sellIcon, self.marketIcon]
-        self.exitBuy, self.exitSell = False, False
         self.buyButtons, self.sellButtons = dict(), dict()
-        self.stockData = webScraping.scraping() #a list of dictionaries
+        self.wholeData = webScraping.scraping()
+        self.stockData = webScraping.scraping()[:6] #a list of dictionaries
         self.manager = pygame_gui.UIManager((self.width, self.height))
+        self.exitBuyButton, self.exitSellButton = None, None
+        self.createMarketDoor()
 
     def createCharacter(self):
         walkRight = [pygame.image.load('R1.png'), pygame.image.load('R2.png'), 
@@ -74,9 +76,9 @@ class PlayGame(object):
     def detectCollision(self): #hitbox: (left top)x, y, width, height 
         if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.market.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.market.hitbox[0] + self.market.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.market.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.market.hitbox[1] + self.market.hitbox[3])):
-            self.protagonist.isCollide = True
+            self.protagonist.inMarket, self.protagonist.isCollide = True, True
         else:
-            self.protagonist.isCollide = False
+            self.protagonist.inMarket, self.protagonist.isCollide = False, False
 
     def drawProtagonist(self, stSurface, moveL, moveR, moveB, moveF):
         if self.protagonist.isCollide:
@@ -121,6 +123,7 @@ class PlayGame(object):
         self.drawProtagonist(stSurface, moveL, moveR, moveF, moveB)
         
         self.drawWallet(stSurface)
+        self.drawInventory(stSurface)
         pygame.display.update()
 
     def moveProtagonist(self, keys):
@@ -183,7 +186,7 @@ class PlayGame(object):
             direction = 'back'
         else:
             direction = None
-        print("current moving direction: ", direction)
+        #print("current moving direction: ", direction)
 
         if self.protagonist.isCollide:
             self.cancelMove(direction)
@@ -192,6 +195,7 @@ class PlayGame(object):
         for item in self.marketItems:
             marketSurface.blit(item.image, (item.x, item.y))
             pygame.draw.rect(marketSurface, (255, 0, 0), item.hitbox, 2)
+        
 
     def drawStockBuy(self, marketSurface):
         colDis = (5 * self.width // 6 - self.width // 12) // 6
@@ -231,6 +235,11 @@ class PlayGame(object):
                                         self.stockData[i]['Symbol'])
             self.buyButtons[self.stockData[i]['Symbol']] = button
             button.drawButton(surface)
+
+        image = pygame.image.load('exitButton.png')
+        image = pygame.transform.scale(image, (10, 10))
+        self.exitBuyButton = createThings.Button(image, 0, 11*self.height//12, 20, 20)
+        self.exitBuyButton.drawButton(surface)
         '''
         for i in range(len(self.stockData)):
             button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((3*self.width//24 + colDis * 4, 2*self.height//8 + rowDis * i), 
@@ -269,7 +278,9 @@ class PlayGame(object):
                 marketSurface.blit(text, (3*self.width//24 + colDis * j, 
                                     2*self.height//8 + rowDis * i))
 
-    def createSellButtons(self, rowDis, colDis):
+        self.createSellButtons(marketSurface, rowDis, colDis)
+
+    def createSellButtons(self, surface, rowDis, colDis):
         buttonW, buttonH = colDis, rowDis
         x = 3 * self.width // 24 + colDis * 5
 
@@ -282,6 +293,11 @@ class PlayGame(object):
                                         self.stockData[i]['Symbol'])
             self.sellButtons[self.stockData[i]['Symbol']] = button
             button.drawButton(surface)
+
+        image = pygame.image.load('exitButton.png')
+        image = pygame.transform.scale(image, (10, 10))
+        self.exitSellButton = createThings.Button(image, 0, 11*self.height//12, 20, 20)
+        self.exitSellButton.drawButton(surface)
         '''
         for i in range(len(self.stockData)):
             button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((3*self.width//24 + colDis * 4, 2*self.height//8 + rowDis * i), 
@@ -290,6 +306,8 @@ class PlayGame(object):
         '''
 
     def drawSellWindow(self, marketSurface):
+        for stock in self.buyButtons:
+            self.buyButtons[stock] = None
         rectangle = (self.width//12, self.height//8, 
                     5*self.width//6, 2*self.height//3)
         pygame.draw.rect(marketSurface, (0, 0, 0), rectangle, 5)
@@ -304,7 +322,7 @@ class PlayGame(object):
         text = font.render("Wallet:" + str(self.protagonist.money), 1,
                             (0, 0, 0))
         surface.blit(text, (5*self.width//6, 0, self.width, self.height//8))
-    '''
+    
     def drawInventory(self, surface):
         rectangle = (0, 0, self.width//6, self.height//4)
         pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
@@ -312,36 +330,52 @@ class PlayGame(object):
         font = pygame.font.SysFont('arial', 15, True)
         text = font.render("Inventory", 1, (0, 0, 0))
         surface.blit(text, (0, 0, self.width//6, self.height//8))
-        print(self.protagonist.inventory)
+        font = pygame.font.SysFont('arial', 10, True)
         if len(self.protagonist.inventory) != 0:
-            for stock in self.protagonist.inventory:
-                numberString = str(self.protagonist.inventory[stock])
-                print(type(numberString))
-                symbol = font.render(stock, 1, (0, 0, 0))
-                num = font.render(numberString, 1 (0, 0, 0))
-                surface.blit(symbol, (0, self.height//8, self.width//12, self.height//4))
-                surface.blit(num, (self.width//12, self.height//8, self.width//6, self.height//4))
-                '''
+            keys = []
+            for key in self.protagonist.inventory.keys():
+                keys.append(key)
+            for i in range(len(keys)):
+                symbol = font.render(keys[i], 1, (0, 0, 0))
+                surface.blit(symbol, (0, self.height//16+i*self.height//32, 
+                                        self.width//12, 
+                                        self.height//16+(i+1)*self.height//32))
+                numShares = str(self.protagonist.inventory[keys[i]])
+                num = font.render(numShares, 1, (0, 0, 0))
+                surface.blit(num, (self.width//12, 
+                                    self.height//16+i*self.height//32, 
+                                    self.width//6, 
+                                    self.height//16+(i+1)*self.height//32))
+                
+    def createMarketDoor(self):
+        self.marketDoor = createThings.Item('door.png', self.width//2, 22*self.height//24, 
+                                            80, 30, 'door')
+
+    def drawMarketDoor(self, surface):
+        surface.blit(self.marketDoor.image, (self.marketDoor.x, self.marketDoor.y))
 
     def redrawMarketWindow(self, marketSurface, moveL, moveR, moveF, moveB):
+        self.exitBuyButton = None
+        self.exitSellButton = None
         marketBgImage = pygame.image.load('marketBg.png')
         marketBgImage = pygame.transform.scale(marketBgImage, (self.width, 
                                                                 self.height))
         marketSurface.blit(marketBgImage, (0, 0))
 
         self.drawMarketItem(marketSurface)
+        self.drawMarketDoor(marketSurface)
         self.drawProtagonist(marketSurface, moveL, moveR, moveF, moveB)
 
-        if not self.exitBuy and self.protagonist.isBuy:
+        if not self.protagonist.exitBuy and self.protagonist.isBuy:
             self.drawBuyWindow(marketSurface)
-        elif not self.exitSell and self.protagonist.isSell:
+        if not self.protagonist.exitSell and self.protagonist.isSell:
             self.drawSellWindow(marketSurface)
 
         self.drawWallet(marketSurface)
-        #self.drawInventory(marketSurface)
+        self.drawInventory(marketSurface)
         pygame.display.update()
 
-    def marketDetectCollision(self):
+    def marketDetectCollision(self, run):
         if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.buyDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.buyDesk.hitbox[0] + self.buyDesk.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.buyDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.buyDesk.hitbox[1] + self.buyDesk.hitbox[3])):
             self.protagonist.isBuy, self.protagonist.isCollide = True, True
@@ -349,9 +383,13 @@ class PlayGame(object):
         elif ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.sellDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.sellDesk.hitbox[0] + self.sellDesk.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.sellDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.sellDesk.hitbox[1] + self.sellDesk.hitbox[3])):
             self.protagonist.isSell, self.protagonist.isCollide = True, True
-            self.protagonist.isBuy = False    
+            self.protagonist.isBuy = False
         else:
-            self.protagonist.isCollide = False
+            self.protagonist.isCollide, self.protagonist.isBuy, self.protagonist.isSell = False, False, False
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.marketDoor.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.marketDoor.hitbox[0] + self.marketDoor.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.marketDoor.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.marketDoor.hitbox[1] + self.marketDoor.hitbox[3])):
+            run = False
+        return run
 
     def buyStocks(self, stockSymbol):
         for stock in self.stockData:
@@ -363,9 +401,32 @@ class PlayGame(object):
             self.protagonist.inventory[stockSymbol] += 1
         else:
             self.protagonist.inventory[stockSymbol] = 1
+        print("inventory: ", self.protagonist.inventory)
 
     def sellStocks(self, stock):
         return
+
+    def detectMarketMouseEvents(self, position):
+        for stock in self.buyButtons:
+            if (self.buyButtons[stock] != None and 
+                self.buyButtons[stock].isClick(position)):
+                self.buyStocks(stock)
+        for stock in self.sellButtons:
+            if (self.sellButtons[stock] != None and 
+                self.sellButtons[stock].isClick(position)):
+                self.sellStocks(stock)
+        if self.exitBuyButton != None and self.exitBuyButton.isClick(position):
+            self.protagonist.exitBuy = True
+            for stock in self.buyButtons:
+                self.buyButtons[stock] = None #clear the buttons when exiting
+        else:
+            self.protagonist.exitBuy = False
+        if self.exitSellButton != None and self.exitSellButton.isClick(position):
+            self.protagonist.exitSell = True
+            for stock in self.sellButtons:
+                self.sellButtons[stock] = None #clear the buttons when exiting
+        else:
+            self.protagonist.exitSell = False
 
     def inMarketRunGame(self):
         marketSurface = pygame.display.set_mode((self.width, self.height))
@@ -374,7 +435,7 @@ class PlayGame(object):
 
         run = True
         while run:
-            print("protagonist's in market")
+            #print("protagonist's in market")
             clock.tick(30)
             time = clock.tick(30)/1000
 
@@ -384,12 +445,7 @@ class PlayGame(object):
                 if event.type == pygame.QUIT:
                     run = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    for stock in self.buyButtons:
-                        if self.buyButtons[stock].isClick(position):
-                            self.buyStocks(stock)
-                    for stock in self.sellButtons:
-                        if self.sellButtons[stock].isClick(position):
-                            self.sellStocks(stock)
+                    self.detectMarketMouseEvents(position)
                     
                     '''
                     if event.user_type == 'ui_button_pressed':
@@ -401,20 +457,16 @@ class PlayGame(object):
                             if event.ui_element == self.sellButtons[stock]:
                                 self.sellStocks(stock)
                     '''
-                self.manager.process_events(event)
-
-            self.manager.update(time)
-            self.manager.draw_ui(marketSurface)
 
             keys = pygame.key.get_pressed()
             (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
 
-            self.marketDetectCollision()
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
 
             self.redrawMarketWindow(marketSurface, moveL, moveR, moveF, moveB)
+            run = self.marketDetectCollision(run)
 
-        pygame.quit()
+        return
 
     def runGame(self):
         pygame.init()
@@ -431,13 +483,13 @@ class PlayGame(object):
                 if event.type == pygame.QUIT:
                     run = False
 
-            if self.protagonist.isCollide:
+            if self.protagonist.inMarket:
                 self.inMarketRunGame()
             
             keys = pygame.key.get_pressed()
             (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
             self.detectCollision()
-            print('is it colliding: ', self.protagonist.isCollide)
+            #print('is it colliding: ', self.protagonist.isCollide)
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
                     
             self.redrawStreetWindow(stSurface, moveL, moveR, moveF, moveB)

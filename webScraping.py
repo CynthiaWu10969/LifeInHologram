@@ -43,6 +43,6 @@ def scraping(url='https://finance.yahoo.com/most-active?count=25&offset=0'): #pa
         #append to the overall list
         data.append(infoDict)
 
-    return data[:6]#
+    return data
 
-print(scraping('https://finance.yahoo.com/most-active?count=25&offset=0'))
+#print(scraping('https://finance.yahoo.com/most-active?count=25&offset=0'))

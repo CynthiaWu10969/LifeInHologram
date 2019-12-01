@@ -18,6 +18,7 @@ class Character(object):
         self.inMarket = False
         self.money = 20000
         self.inventory = dict()
+        self.exitBuy, self.exitSell = False, False
 
 class Background(object):
     def __init__(self, image, name):
@@ -26,7 +27,7 @@ class Background(object):
         self.name = name
 
 class Button(object):
-    def __init__(self, image, x, y, width, height, stock):
+    def __init__(self, image, x, y, width, height, stock=None):
         self.image = image
         self.image = pygame.transform.scale(self.image, (width, height))
         self.x, self.y = x, y

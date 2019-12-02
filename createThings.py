@@ -15,16 +15,19 @@ class Character(object):
         self.stand = stand
         self.hitbox = (self.x, self.y, width, height)
         self.isCollide, self.isBuy, self.isSell = False, False, False
-        self.inMarket = False
-        self.money = 20000
+        self.inMarket, self.inBank, self.isDeposit = False, False, False
+        self.money, self.deposit = 20000, 0
         self.inventory = dict()
-        self.exitBuy, self.exitSell = False, False
+        self.exitBuy, self.exitSell, self.exitDeposit = False, False, False
 
 class Background(object):
     def __init__(self, image, name):
         self.image = pygame.image.load(image)
         self.image = pygame.transform.scale(self.image, (600, 400))
         self.name = name
+
+    def drawBg(self, surface):
+        surface.blit(self.image, (0, 0))
 
 class Button(object):
     def __init__(self, image, x, y, width, height, stock=None):
@@ -50,3 +53,6 @@ class Item(object):
         self.name = name
         self.x, self.y = x, y
         self.hitbox = (self.x , self.y , width, height)
+
+    def drawItem(self, surface):
+        surface.blit(self.image, (self.x, self.y))

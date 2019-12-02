@@ -2,8 +2,10 @@ import pygame
 import pygame_gui
 import webScraping
 import createThings
+import graphics
 from tkinter import *
 import string
+import random
 
 class PlayGame(object):
     def __init__(self, width, height):
@@ -25,8 +27,14 @@ class PlayGame(object):
         self.wholeData = webScraping.scraping()
         self.stockData = webScraping.scraping()[:6] #a list of dictionaries
         self.manager = pygame_gui.UIManager((self.width, self.height))
-        self.exitBuyButton, self.exitSellButton = None, None
-        self.createMarketDoor()
+        self.exitBuyButton, self.exitSellButton, exitDepositButton = None, None, None
+        self.createDoor()
+        self.moneyForDeposit, self.moneyForWithdraw = 1000, 1000
+        self.bankDesk = None
+        self.interest = round(random.uniform(0.5, 1.3), 2)
+        self.depositPlus, self.depositMinus = None, None #these are buttons
+        self.withdrawPlus, self.withdrawMinus = None, None
+        self.depositButton, self.withdrawButton = None, None
 
     def createCharacter(self):
         walkRight = [pygame.image.load('R1.png'), pygame.image.load('R2.png'), 
@@ -61,6 +69,11 @@ class PlayGame(object):
         self.workplace = createThings.Item('workplace.png', 5*self.width//6, 
                                 7*self.height//12+5, 75, 100, 'workplace')
 
+    def drawFixedItems(self, surface):
+        self.drawDoor(surface)
+        self.drawWallet(surface)
+        self.drawInventory(surface)
+
     def createMarketItems(self):
         self.buyDesk = createThings.Item('buyDesk.png', 4*self.width//6, self.height//5, 
                             150, 150, 'buy desk')
@@ -77,8 +90,11 @@ class PlayGame(object):
         if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.market.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.market.hitbox[0] + self.market.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.market.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.market.hitbox[1] + self.market.hitbox[3])):
             self.protagonist.inMarket, self.protagonist.isCollide = True, True
+        elif ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.bank.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.bank.hitbox[0] + self.bank.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.bank.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.bank.hitbox[1] + self.bank.hitbox[3])):
+            self.protagonist.inBank, self.protagonist.isCollide = True, True
         else:
-            self.protagonist.inMarket, self.protagonist.isCollide = False, False
+            self.protagonist.isCollide = False
 
     def drawProtagonist(self, stSurface, moveL, moveR, moveB, moveF):
         if self.protagonist.isCollide:
@@ -109,17 +125,21 @@ class PlayGame(object):
         self.protagonist.hitbox=(self.protagonist.x, self.protagonist.y, 
                                 self.protagonist.width, 
                                 self.protagonist.height)
-        pygame.draw.rect(stSurface, (255, 0, 0), self.protagonist.hitbox, 2)
 
     def drawStItem(self, stSurface):
         for item in self.itemList:
             stSurface.blit(item.image, (item.x, item.y))
-            pygame.draw.rect(stSurface, (255, 0, 0), item.hitbox, 2)
+
+    def doExpense(self):
+        currentTime = pygame.time.get_ticks()
+        #if currentTime % 15000 == 0:
+            #self.protagonist.money -= 2500
 
     def redrawStreetWindow(self, stSurface, moveL, moveR, moveF, moveB):
         stSurface.blit(self.streetBackground.image, (0, 0))
 
         self.drawStItem(stSurface)
+        graphics.drawPeople(stSurface, self.width, self.height)
         self.drawProtagonist(stSurface, moveL, moveR, moveF, moveB)
         
         self.drawWallet(stSurface)
@@ -194,7 +214,6 @@ class PlayGame(object):
     def drawMarketItem(self, marketSurface):
         for item in self.marketItems:
             marketSurface.blit(item.image, (item.x, item.y))
-            pygame.draw.rect(marketSurface, (255, 0, 0), item.hitbox, 2)
         
 
     def drawStockBuy(self, marketSurface):
@@ -230,7 +249,7 @@ class PlayGame(object):
         image = pygame.transform.scale(image, (buttonW, buttonH))
 
         for i in range(len(self.stockData)-1):
-            button = createThings.Button(image, x, self.height//4+rowDis*(i+1), 
+            button = createThings.Button(image, x, self.height//4+rowDis*(i+1)-5, 
                                         buttonW, buttonH, 
                                         self.stockData[i]['Symbol'])
             self.buyButtons[self.stockData[i]['Symbol']] = button
@@ -288,7 +307,7 @@ class PlayGame(object):
         image = pygame.transform.scale(image, (buttonW, buttonH))
 
         for i in range(len(self.stockData)-1):
-            button = createThings.Button(image, x, self.height//4+rowDis*(i+1), 
+            button = createThings.Button(image, x, self.height//4+rowDis*(i+1)-5, 
                                         buttonW, buttonH, 
                                         self.stockData[i]['Symbol'])
             self.sellButtons[self.stockData[i]['Symbol']] = button
@@ -347,12 +366,12 @@ class PlayGame(object):
                                     self.width//6, 
                                     self.height//16+(i+1)*self.height//32))
                 
-    def createMarketDoor(self):
-        self.marketDoor = createThings.Item('door.png', self.width//2, 22*self.height//24, 
+    def createDoor(self):
+        self.door = createThings.Item('door.png', self.width//2, 22*self.height//24, 
                                             80, 30, 'door')
 
-    def drawMarketDoor(self, surface):
-        surface.blit(self.marketDoor.image, (self.marketDoor.x, self.marketDoor.y))
+    def drawDoor(self, surface):
+        surface.blit(self.door.image, (self.door.x, self.door.y))
 
     def redrawMarketWindow(self, marketSurface, moveL, moveR, moveF, moveB):
         self.exitBuyButton = None
@@ -363,7 +382,6 @@ class PlayGame(object):
         marketSurface.blit(marketBgImage, (0, 0))
 
         self.drawMarketItem(marketSurface)
-        self.drawMarketDoor(marketSurface)
         self.drawProtagonist(marketSurface, moveL, moveR, moveF, moveB)
 
         if not self.protagonist.exitBuy and self.protagonist.isBuy:
@@ -371,8 +389,7 @@ class PlayGame(object):
         if not self.protagonist.exitSell and self.protagonist.isSell:
             self.drawSellWindow(marketSurface)
 
-        self.drawWallet(marketSurface)
-        self.drawInventory(marketSurface)
+        self.drawFixedItems(marketSurface)
         pygame.display.update()
 
     def marketDetectCollision(self, run):
@@ -386,8 +403,8 @@ class PlayGame(object):
             self.protagonist.isBuy = False
         else:
             self.protagonist.isCollide, self.protagonist.isBuy, self.protagonist.isSell = False, False, False
-        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.marketDoor.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.marketDoor.hitbox[0] + self.marketDoor.hitbox[2])
-            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.marketDoor.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.marketDoor.hitbox[1] + self.marketDoor.hitbox[3])):
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.door.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.door.hitbox[0] + self.door.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.door.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.door.hitbox[1] + self.door.hitbox[3])):
             run = False
         return run
 
@@ -403,8 +420,20 @@ class PlayGame(object):
             self.protagonist.inventory[stockSymbol] = 1
         print("inventory: ", self.protagonist.inventory)
 
-    def sellStocks(self, stock):
-        return
+    #def marketErrorScreen(self):
+
+    def sellStocks(self, targetStock):
+        for i in range(len(self.wholeData)):
+            if self.wholeData[i]['Symbol'] == targetStock:
+                if targetStock in self.protagonist.inventory:
+                    self.protagonist.money += float(self.wholeData[i]['Price'])
+                    if self.protagonist.inventory[targetStock] > 1:
+                        self.protagonist.inventory[targetStock] -= 1
+                    else:
+                        del self.protagonist.inventory[targetStock]
+                else:
+                    return
+                    #self.marketErrorScreen() you dont have this in inventory
 
     def detectMarketMouseEvents(self, position):
         for stock in self.buyButtons:
@@ -427,6 +456,214 @@ class PlayGame(object):
                 self.sellButtons[stock] = None #clear the buttons when exiting
         else:
             self.protagonist.exitSell = False
+
+    def createBankItems(self):
+        self.bankDesk = createThings.Item('bankDesk.png', 4*self.width//6, 
+                                        self.height//5, 150, 150, 'bank desk')
+
+    def drawBankItems(self, surface):
+        self.createBankItems()
+        self.bankDesk.drawItem(surface)
+
+        rectangle = (self.width//6, self.height//8, 
+                    3*self.width//7, self.height//5)
+        pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
+        surface.fill((0, 128, 129), rectangle)
+        font = pygame.font.SysFont('arial', 25, True)
+        text = font.render('WELCOME TO BANK', 1, (0, 0, 0))
+        surface.blit(text, (self.width//6, self.height//8))
+        
+        font = pygame.font.SysFont('arial', 15, True)
+        text = font.render(f'The current interest rate is {self.interest}', 1, 
+                            (0, 0, 0))
+        surface.blit(text, (self.width//6, self.height//4))
+
+    def redrawBankWindow(self, bankSurface, moveL, moveR, moveF, moveB):
+        bankBg = createThings.Background('bankBg.png', 'bank')
+        bankBg.drawBg(bankSurface)
+
+        self.drawBankItems(bankSurface)
+        self.drawProtagonist(bankSurface, moveL, moveR, moveF, moveB)
+
+        self.drawFixedItems(bankSurface)
+
+        if self.protagonist.isDeposit:
+            self.createBankWindow(bankSurface)
+
+        pygame.display.update()
+
+    def drawDepositWindow(self, surface):
+        font = pygame.font.SysFont('arial', 15, True)
+        text = font.render(f'Your current balance is {self.protagonist.money}.', 1, (0, 0, 0))
+        surface.blit(text, (self.width//12, self.height//3))
+
+        image = pygame.image.load('minus.png')
+        self.depositMinus = createThings.Button(image, self.width//11, self.height//2,
+                                    30, 30)
+        self.depositMinus.drawButton(surface)
+
+        image = pygame.image.load('plus.png')
+        self.depositPlus = createThings.Button(image, self.width//3, self.height//2, 
+                                    30, 30)
+        self.depositPlus.drawButton(surface)
+
+        font = pygame.font.SysFont('arial', 20, True)
+        text = font.render(f'{self.moneyForDeposit}', 1, (0, 0, 0))
+        surface.blit(text, (self.width//5, self.height//2+5))
+
+        image = pygame.image.load('deposit.png')
+        self.depositButton = createThings.Button(image, self.width//5, 
+                                                2*self.height//3, 40, 40)
+        self.depositButton.drawButton(surface)
+
+    def drawWithdrawWindow(self, surface):
+        font = pygame.font.SysFont('arial', 15, True)
+        text = font.render(f'Your current deposit is {self.protagonist.deposit}.', 1, (0, 0, 0))
+        surface.blit(text, (self.width//2, self.height//3))
+
+        font = pygame.font.SysFont('arial', 15, True)
+        text = font.render(f'Current interest rate is {self.interest}.', 1, (0, 0, 0))
+        surface.blit(text, (self.width//2, self.height//3+20))
+
+        image = pygame.image.load('minus.png')
+        self.withdrawMinus = createThings.Button(image, self.width//2+self.width//11, self.height//2,
+                                    30, 30)
+        self.withdrawMinus.drawButton(surface)
+
+        image = pygame.image.load('plus.png')
+        self.withdrawPlus = createThings.Button(image, self.width//2+self.width//3, self.height//2, 
+                                    30, 30)
+        self.withdrawPlus.drawButton(surface)
+
+        font = pygame.font.SysFont('arial', 20, True)
+        text = font.render(f'{self.moneyForWithdraw}', 1, (0, 0, 0))
+        surface.blit(text, (self.width//2+self.width//5, self.height//2+5))
+
+        image = pygame.image.load('withdraw.png')
+        self.withdrawButton = createThings.Button(image, self.width//2+self.width//5, 
+                                                2*self.height//3, 40, 40)
+        self.withdrawButton.drawButton(surface)
+
+    def createBankWindow(self, surface):
+        rectangle = (self.width//12, self.height//8, 
+                    5*self.width//6, 2*self.height//3)
+        pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
+        surface.fill((255, 255, 255), rectangle)
+
+        font = pygame.font.SysFont('arial', 20, True)
+        text = font.render('Would you like to ...', 1, (0, 0, 0))
+        surface.blit(text, (self.width//3, self.height//7))
+
+        font = pygame.font.SysFont('arial', 20, True)
+        text = font.render('Deposit', 1, (0, 0, 0))
+        surface.blit(text, (self.width//12, self.height//4))
+        self.drawDepositWindow(surface)
+        
+        font = pygame.font.SysFont('arial', 20, True)
+        text = font.render('Withdraw', 1, (0, 0, 0))
+        surface.blit(text, (6*self.width//12, self.height//4))
+        self.drawWithdrawWindow(surface)
+
+        image = pygame.image.load('exitButton.png')
+        image = pygame.transform.scale(image, (10, 10))
+        self.exitDepositButton = createThings.Button(image, 0, 11*self.height//12, 20, 20)
+        self.exitDepositButton.drawButton(surface)
+
+    def bankDetectCollision(self, run):
+        self.protagonist.isCollide = False
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.bankDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.bankDesk.hitbox[0] + self.bankDesk.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.bankDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.bankDesk.hitbox[1] + self.bankDesk.hitbox[3])):
+            self.protagonist.isDeposit, self.protagonist.isCollide = True, True
+        else:
+            self.protagonist.isDeposit, self.protagonist.isCollide = False, False
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.door.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.door.hitbox[0] + self.door.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.door.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.door.hitbox[1] + self.door.hitbox[3])):
+            run = False
+        return run
+
+    def changeInterest(self):
+        time = pygame.time.get_ticks()
+        if time % 10000 == 0:
+            self.interest = round(random.uniform(0.5, 1.3), 2)
+
+    #def bankErrorScreen(self):
+
+    def detectBankMouseEvents(self, position):
+        if self.exitDepositButton.isClick(position):
+            self.protagonist.isDeposit = False
+            depositButtons = [self.depositMinus, self.depositPlus, self.depositButton, self.withdrawButton, self.withdrawMinus, self.withdrawPlus]
+            for i in range(len(depositButtons)):
+                depositButtons[i] = None
+
+        if (self.protagonist.isDeposit and self.depositPlus != None and 
+            self.depositPlus.isClick(position)):
+            if self.moneyForDeposit < self.protagonist.money:
+                self.moneyForDeposit += 1000
+            else:
+                return 
+                # self.bankErrorScreen()
+        elif (self.protagonist.isDeposit and self.depositMinus != None and 
+            self.depositMinus.isClick(position)):
+            if self.moneyForDeposit >= 1000:
+                self.moneyForDeposit -= 1000
+            else:
+                return
+        
+        if self.protagonist.isDeposit and self.withdrawPlus.isClick(position):
+            if self.moneyForWithdraw < self.protagonist.deposit:
+                self.moneyForWithdraw += 1000
+            else:
+                return
+                # self.bankErrorScreen()
+        elif self.protagonist.isDeposit and self.withdrawMinus.isClick(position):
+            if self.moneyForWithdraw >= 1000:
+                self.moneyForWithdraw -= 1000
+            else:
+                return
+        
+        if self.protagonist.isDeposit and self.depositButton.isClick(position):
+            self.protagonist.deposit += self.moneyForDeposit
+            self.protagonist.money -= self.moneyForDeposit
+            self.moneyForDeposit = 1000
+
+        if self.protagonist.isDeposit and self.withdrawButton.isClick(position):
+            self.protagonist.deposit -= self.moneyForWithdraw
+            self.protagonist.money += self.moneyForWithdraw + self.moneyForWithdraw * self.interest
+            self.moneyForWithdraw = 1000
+
+        
+        #我他妈debug不出来啊我日
+
+    def inBankRunGame(self):
+        bankSurface = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption("Bank")
+        clock = pygame.time.Clock()
+
+        run = True
+        while run:
+            #print("protagonist's in bank")
+            clock.tick(15)
+
+            for event in pygame.event.get():
+                position = pygame.mouse.get_pos()
+
+                if event.type == pygame.QUIT:
+                    run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    self.detectBankMouseEvents(position)
+
+            keys = pygame.key.get_pressed()
+            (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
+
+            self.checkDirectForCollision(moveL, moveR, moveF, moveB)
+
+            self.doExpense()
+            self.changeInterest()
+            self.redrawBankWindow(bankSurface, moveL, moveR, moveF, moveB)
+            run = self.bankDetectCollision(run)
+
+        self.protagonist.inBank = False
+        return
 
     def inMarketRunGame(self):
         marketSurface = pygame.display.set_mode((self.width, self.height))
@@ -463,10 +700,20 @@ class PlayGame(object):
 
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
 
+            self.doExpense()
             self.redrawMarketWindow(marketSurface, moveL, moveR, moveF, moveB)
             run = self.marketDetectCollision(run)
-
+        
+        self.protagonist.inMarket = False
         return
+
+    def detectAnotherPlace(self):
+        if self.protagonist.inMarket:
+            self.protagonist.x, self.protagonist.y = self.width//2, self.height//2
+            self.inMarketRunGame()
+        elif self.protagonist.inBank:
+            self.protagonist.x, self.protagonist.y = self.width//2, self.height//2
+            self.inBankRunGame()
 
     def runGame(self):
         pygame.init()
@@ -483,8 +730,7 @@ class PlayGame(object):
                 if event.type == pygame.QUIT:
                     run = False
 
-            if self.protagonist.inMarket:
-                self.inMarketRunGame()
+            self.detectAnotherPlace()
             
             keys = pygame.key.get_pressed()
             (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
@@ -492,9 +738,9 @@ class PlayGame(object):
             #print('is it colliding: ', self.protagonist.isCollide)
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
                     
+            self.doExpense()
             self.redrawStreetWindow(stSurface, moveL, moveR, moveF, moveB)
 
         pygame.quit()
 
 PlayGame(600, 400).runGame()
-

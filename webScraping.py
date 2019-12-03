@@ -45,4 +45,4 @@ def scraping(url='https://finance.yahoo.com/most-active?count=25&offset=0'): #pa
 
     return data
 
-#print(scraping('https://finance.yahoo.com/most-active?count=25&offset=0'))
+#print(scraping('https://finance.yahoo.com/most-active?count=25&offset=0')[0:3])

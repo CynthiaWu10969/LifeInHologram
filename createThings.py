@@ -19,6 +19,7 @@ class Character(object):
         self.money, self.deposit = 20000, 0
         self.inventory = dict()
         self.exitBuy, self.exitSell, self.exitDeposit = False, False, False
+        self.inWork, self.isReceiveWork = False, False
 
 class Background(object):
     def __init__(self, image, name):

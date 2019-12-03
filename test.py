@@ -343,10 +343,18 @@ while loop:
     clock.tick(60)
 
 pygame.quit()
-'''
+
 import random
 
 num = random.uniform(2, 4)
 print(num)
 num = round(num, 2)
 print(num)
+
+
+d = {'a':1, 'b':2, 'c':3}
+l = list(d.keys())
+print(l)
+'''
+d = {}
+print('a' in d)

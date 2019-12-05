@@ -8,10 +8,10 @@ def instructions(): #换行
     instruction4 = 'What would you do to avoid the situation where your balance becomes 0???'
     instruction5 = 'Well, try to invest in the stock market and save up your money!'
     instruction6 = 'In Life In Hologram, you can invest in real stocks with real time data.'
-    instruction7 = 'Wisely choose stocks based on their performances.'
+    instruction7 = 'Wisely choose stocks and check your stocks anytime by clicking inventory.'
     instruction8 = 'You can also deposit your money to earn some interest.'
     instruction9 = '    **Note: stock page can be lagging because we are using real time data!**'
-    instruction10 = 'Press ENTER to start!'
+    instruction10 = 'Press SPACE to start!'
 
     return [instruction1, instruction2, instruction3, instruction4, instruction5, instruction6, instruction7, instruction8, instruction9, instruction10]
 
@@ -29,7 +29,7 @@ def createHelp():
     help11 = '3. Complete tasks: By completing tasks assigned, you can earn salaries!'
     help12 = 'You can check your monthly expense and student loan in the study at your home.'
     help13 = 'If your balance goes to 0, you lose the game.'
-    help14 = "Press 'h' to see this help screen anytime during game & press ENTER to go back."
+    help14 = "Press 'h' to see this help screen anytime during game & press SPACE to go back."
     help15 = 'GOOD LUCK!!!'
 
     return [help1, help2, help3, help4, help5, help6, help7, help8, help9, help10, help11, help12, help13, help14, help15]

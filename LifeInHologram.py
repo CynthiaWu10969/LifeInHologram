@@ -1,5 +1,7 @@
 '''
 Images Citations: 
+markeBg = 'https://image.freepik.com/free-photo/blurred-abstract-background-interior-view-looking-out-toward-empty-office-lobby-entrance-doors-glass-curtain-wall-with-frame_1339-6364.jpg'
+bankBg = 'https://st3.depositphotos.com/5303366/18624/v/600/depositphotos_186243158-stock-video-icon-of-bank-financial-background.jpg'
 spritesheet: https://p1.hiclipart.com/preview/53/364/990/julian-assange-sprite-sheet-png-clipart-thumbnail.jpg 
 bank: https://www.usnews.com/dims4/USNEWS/f38e0dd/2147483647/thumbnail/640x420/quality/85/?url=http%3A%2F%2Fcom-usnews-beam-media.s3.amazonaws.com%2Fa7%2F6a%2F462f637342bd88cfa75247b89bea%2F190412-bank-stock.jpg 
 buyDesk: http://trust-sys.com/trust-sys.com/wp-content/uploads/2016/04/trust-accounting.png
@@ -17,8 +19,15 @@ sellDesk: https://cdn.iconscout.com/icon/premium/png-256-thumb/receptionist-desk
 sellIcon: https://mmbiz.qpic.cn/mmbiz_png/tbyoduyMj0dhA2wCZoYncGjeE06j9Hns1Q16TQVILichOtKGebDjuYIPJVnGUianVdqJOKnJgUXhzCJozCzaeLPw/640?wx_fmt=png
 workDesk: https://cdn.dribbble.com/users/944703/screenshots/3354467/____-01-01.jpg
 workImage: https://cdn.dribbble.com/users/147557/screenshots/3490991/office-icon.jpg 
-workplace: https://png.pngtree.com/png-vector/20190119/ourlarge/pngtree-2-5d-building-2-5d-bungalow-building-bungalow-png-image_474133.jpg 
+workBg: https://png.pngtree.com/png-vector/20190119/ourlarge/pngtree-2-5d-building-2-5d-bungalow-building-bungalow-png-image_474133.jpg 
 helpBg: https://www.fg-a.com/wallpapers/white-marble-1-2018.jpg 
+invBg = 'https://us.123rf.com/450wm/the7dew/the7dew1703/the7dew170300244/73854416-fondo-de-indicador-de-an%C3%A1lisis-financiero-del-mercado-de-valores.jpg?ver=6'
+parkBg = 'https://graphicriver.img.customer.envatousercontent.com/files/267764928/preview.jpg?auto=compress%2Cformat&q=80&fit=crop&crop=top&max-h=8000&max-w=590&s=0d14ad2e355ff87ac69638687dcd3180'
+redFlower = https://www.fg-a.com/flowers-animated/8-purple-red-flowers-265.jpg'
+flower1 = 'https://www.pngkey.com/png/detail/247-2476779_billboard-texture-png-grass-with-flowers-animated.png'
+flower2 = 'http://clipart-library.com/images_k/cartoon-grass-transparent/cartoon-grass-transparent-7.png'
+file = 'https://superawesomevectors.com/wp-content/uploads/2017/10/folder-vector-icon-800x566.jpg'
+receiveButton = 'https://cdn2.iconfinder.com/data/icons/multimedia-102/64/67-512.png'
 '''
 
 import pygame
@@ -28,6 +37,7 @@ import graphics
 import string
 import random
 import instructionPage
+import tasks
 
 def almostEqual(d1, d2, epsilon=10**-7): #from 15112 hw file
     # note: use math.isclose() outside 15-112 with Python version 3.5 or later
@@ -51,7 +61,7 @@ class PlayGame(object):
         self.marketItems = [self.buyDesk, self.sellDesk, self.buyIcon, 
                             self.sellIcon, self.marketIcon]
         self.buyButtons, self.sellButtons = dict(), dict()
-        self.exitBuyButton, self.exitSellButton, exitDepositButton = None, None, None
+        self.exitBuyButton, self.exitSellButton, self.exitDepositButton = None, None, None
         self.createDoor()
         self.moneyForDeposit, self.monthForWithdraw = 1000, 0
         self.bankDesk, self.workDesk = None, None
@@ -72,12 +82,20 @@ class PlayGame(object):
         self.wholeStockDict = dict() # convert the stock data into a dict of dicts
         for stock in self.wholeData:
             self.wholeStockDict[stock['Symbol']] = stock
+        self.exitWorkButton = None
+        self.redFlower, self.flower1, self.flower2 = None, None, None
+        self.file = None
+        self.receiveButton, self.showTask = None, None
+        self.taskStopTime = None
+        self.isTaskComplete = False
+        self.tasksDict = {'flower': {'money': 300, 'time': 5, 'task': 'Pick some red flowers'}, 
+                        'file': {'money': 300, 'time': 10, 'task': 'Gather a yellow folder'}}
 
     def redrawWholeInventory(self, surface):
         invBg = createThings.Background('invBg.png', 'inventory')
         invBg.drawBg(surface)
 
-        colDis = (5 * self.width // 6 - self.width // 12) // 6 + 30
+        colDis = (5 * self.width // 6 - self.width // 12) // 6 + 10
         rowDis = (2 * self.height // 3 - self.height // 8) // 6
 
         font = pygame.font.SysFont('arial', 35, True)
@@ -90,6 +108,7 @@ class PlayGame(object):
             surface.blit(text, (self.width//10, self.height//3))
         else:
             invInfo = dict()
+            invInfo['first'] = None #for spacing
 
             for stock in self.protagonist.inventory:
                 if stock not in invInfo:
@@ -97,14 +116,15 @@ class PlayGame(object):
                         invInfo[stock] = self.wholeStockDict[stock]
                     else: #如果刷新的stock data里面没有这支stock
                         invInfo[stock] = self.currentStock[stock]
-            #print('inventory info: ', invInfo)
 
             font = pygame.font.SysFont('arial', 15, True)
 
             stockInfo = ['Symbol', 'Price', 'Change', '% Change', 
                         'Market Cap', 'Shares Hold']
 
-            invKeys = list(self.protagonist.inventory.keys()) # stock symbols
+            invKeys = [0] #for spacing
+            invKeys += list(self.protagonist.inventory.keys()) # stock symbols
+            #print('inv key:', invKeys)
             for j in range(len(stockInfo)): # draws the table for stocks
                 for i in range(len(invKeys)):
                     if i == 0:
@@ -122,7 +142,7 @@ class PlayGame(object):
                                 color = (255, 255, 255)
                             text = font.render(invInfo[invKeys[i]][stockInfo[j]], 1, 
                                             color)
-                    surface.blit(text, (3*self.width//24 + colDis * j, 
+                    surface.blit(text, (self.width//9 + colDis * j, 
                                         2*self.height//8 + rowDis * i))
 
         pygame.display.update()
@@ -215,6 +235,9 @@ class PlayGame(object):
         elif ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.home.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.home.hitbox[0] + self.home.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.home.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.home.hitbox[1] + self.home.hitbox[3])):
             self.protagonist.isCollide, self.protagonist.inHome = True, True
+        elif ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.park.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.park.hitbox[0] + self.park.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.park.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.park.hitbox[1] + self.park.hitbox[3])):
+            self.protagonist.isCollide, self.protagonist.inPark = True, True
         else:
             self.protagonist.isCollide = False
 
@@ -373,14 +396,14 @@ class PlayGame(object):
         self.createBuyButtons(marketSurface, colDis, rowDis)
 
     def createBuyButtons(self, surface, colDis, rowDis):
-        buttonW, buttonH = colDis, rowDis
+        buttonW, buttonH = colDis-5, rowDis-5
         x = 3 * self.width // 24 + colDis * 5
 
         image = pygame.image.load('buyButton.png')
         image = pygame.transform.scale(image, (buttonW, buttonH))
 
         for i in range(len(self.stockData)-1):
-            button = createThings.Button(image, x, self.height//4+rowDis*(i+1)-5, 
+            button = createThings.Button(image, x, self.height//4+rowDis*(i+1)-7, 
                                         buttonW, buttonH, 
                                         self.stockData[i]['Symbol'])
             self.buyButtons[self.stockData[i]['Symbol']] = button
@@ -425,32 +448,33 @@ class PlayGame(object):
             marketSurface.blit(text, (self.width//6, self.height//3))
             for button in self.sellButtons:
                 self.sellButtons[button] = None
-
-        invKeys = list(self.protagonist.inventory.keys()) #stock symbols
-        for j in range(len(stockInfo)): 
-            # draws the table for stocks
-            for i in range(len(invKeys)):
-                if i == 0:
-                    text = font.render(stockInfo[j], 1, (0, 0, 0))
-                else:
-                    if invKeys[i] in self.wholeStockDict:
-                        inUse = self.wholeStockDict
+        else:
+            invKeys = [0]
+            invKeys += list(self.protagonist.inventory.keys()) #stock symbols
+            for j in range(len(stockInfo)): 
+                # draws the table for stocks
+                for i in range(len(invKeys)):
+                    if i == 0:
+                        text = font.render(stockInfo[j], 1, (0, 0, 0))
                     else:
-                        inUse = self.currentStock
-                    if j == 2 or j == 3:
-                        if inUse[invKeys[i]][stockInfo[j]][0] == '-':
-                            color = (255, 50, 58)
+                        if invKeys[i] in self.wholeStockDict:
+                            inUse = self.wholeStockDict
                         else:
-                            color = (0, 153, 51)
-                    else:
-                        color = (0, 0, 0)
-                    text = font.render(inUse[invKeys[i]][stockInfo[j]], 
-                                        1, color)
-                marketSurface.blit(text, (3*self.width//24 + colDis * j, 
-                                    2*self.height//8 + rowDis * i))
+                            inUse = self.currentStock
+                        if j == 2 or j == 3:
+                            if inUse[invKeys[i]][stockInfo[j]][0] == '-':
+                                color = (255, 50, 58)
+                            else:
+                                color = (0, 153, 51)
+                        else:
+                            color = (0, 0, 0)
+                        text = font.render(inUse[invKeys[i]][stockInfo[j]], 
+                                            1, color)
+                    marketSurface.blit(text, (3*self.width//24 + colDis * j, 
+                                        2*self.height//8 + rowDis * i))
 
     def createSellButtons(self, surface, rowDis, colDis):
-        buttonW, buttonH = colDis, rowDis
+        buttonW, buttonH = colDis-5, rowDis-5
         x = 3 * self.width // 24 + colDis * 5
 
         image = pygame.image.load('sellButton.png')
@@ -458,7 +482,7 @@ class PlayGame(object):
 
         keys = list(self.protagonist.inventory.keys()) #list of stock symbols
         for i in range(len(keys)):
-            button = createThings.Button(image, x, self.height//4+rowDis*(i+1)-5, 
+            button = createThings.Button(image, x, self.height//4+rowDis*(i+1)-7, 
                                         buttonW, buttonH, keys[i])
             self.sellButtons[keys[i]] = button
             button.drawButton(surface)
@@ -641,7 +665,7 @@ class PlayGame(object):
 
         self.drawFixedItems(bankSurface)
 
-        if self.protagonist.isDeposit:
+        if self.protagonist.isDeposit and not self.protagonist.exitDeposit:
             self.createBankWindow(bankSurface)
 
         pygame.display.update()
@@ -849,6 +873,7 @@ class PlayGame(object):
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
 
             self.doExpense()
+            self.checkTimeForTask(bankSurface)
             self.changeInterest()
             self.redrawBankWindow(bankSurface, moveL, moveR, moveF, moveB)
             run = self.bankDetectCollision(run)
@@ -886,7 +911,7 @@ class PlayGame(object):
             clock.tick(30)
             time = clock.tick(30)/1000
 
-            #self.updateWebScraping()
+            self.updateWebScraping()
 
             for event in pygame.event.get():
                 position = pygame.mouse.get_pos()
@@ -910,6 +935,7 @@ class PlayGame(object):
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
 
             self.doExpense()
+            self.checkTimeForTask(marketSurface)
             self.redrawMarketWindow(marketSurface, moveL, moveR, moveF, moveB)
             run = self.marketDetectCollision(run)
         
@@ -928,22 +954,152 @@ class PlayGame(object):
         self.protagonist.y = self.market.hitbox[1] + self.market.hitbox[3]
         return
 
+    def setTaskVariablesBack(self):
+        self.protagonist.onFileTask, self.protagonist.onFlowerTask = False, False
+        self.redFlower, self.flower1, self.flower2 = None, None, None
+        self.file = None
+        self.receiveButton, self.showTask = None, None
+        self.taskStopTime = 0
+        self.isTaskComplete = False
+
+    def drawTaskComplete(self, surface):
+        rectangle = (self.width//6, self.height//4, 2*self.width//4, self.height//2)
+        pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
+        surface.fill((255, 255, 255), rectangle)
+
+        font = pygame.font.SysFont('arial', 40, True)
+        text = font.render('CONGRATS!', 1, (0, 0, 0))
+        surface.blit(text, (self.width//5, self.height//4))
+
+        if self.protagonist.onFlowerTask:
+            font = pygame.font.SysFont('arial', 20, True)
+            text = font.render('You have finished the flower task and earned $300!', 1, (0, 0, 0))
+            surface.blit(text, (self.width//6, self.height//3))
+        elif self.protagonist.onFileTask:
+            font = pygame.font.SysFont('arial', 20, True)
+            text = font.render('You have finished the file task and earned $500!', 1, (0, 0, 0))
+            surface.blit(text, (self.width//6, self.height//3))
+
+        self.setTaskVariablesBack()
+
+    def drawTaskFailed(self, surface):
+        rectangle = (self.width//6, self.height//4, 2*self.width//4, self.height//2)
+        pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
+        surface.fill((255, 255, 255), rectangle)
+
+        font = pygame.font.SysFont('arial', 40, True)
+        text = font.render('OOPS, time up!', 1, (0, 0, 0))
+        surface.blit(text, (self.width//5, self.height//4))
+
+        if self.protagonist.onFlowerTask:
+            font = pygame.font.SysFont('arial', 20, True)
+            text = font.render('Flower task failed and you lose $200...', 1, (0, 0, 0))
+            surface.blit(text, (self.width//6, self.height//3))
+        elif self.protagonist.onFileTask:
+            font = pygame.font.SysFont('arial', 20, True)
+            text = font.render('File task failed and you lose $200...', 1, (0, 0, 0))
+            surface.blit(text, (self.width//6, self.height//3))
+
+        self.setTaskVariablesBack()
+
+    def checkTimeForTask(self, surface):
+        if self.taskStopTime == None: # game is first initialized
+            return
+        else: 
+            if self.timer >= self.taskStopTime and not self.isTaskComplete:
+                print('timer:', self.timer)
+                print('task stop time: ', self.taskStopTime)
+                self.protagonist.onFlowerTask, self.protagonist.onFileTask = False, False
+                self.protagonist.money -= 200
+                self.drawTaskFailed(surface)
+            else:
+                self.taskStopTime = 0
+                if self.protagonist.onFlowerTask:
+                    self.protagonist.money += 300
+                elif self.protagonist.onFileTask:
+                    self.protagonist.money += 500
+                self.drawTaskComplete(surface)
+
     def createWorkItems(self):
-        self.workDesk = createThings.Item('workDesk.png', self.width//3, 
-                                        self.height//4, 180, 120, 'work desk')
+        self.workDesk = createThings.Item('workDesk.png', self.width//10, 
+                                        self.height//2, 240, 160, 'work desk')
 
     def drawWorkItems(self, surface):
         self.createWorkItems()
         self.workDesk.drawItem(surface)
 
+    def drawReceiveButton(self, surface):
+        image = pygame.image.load('receiveButton.png')
+        self.receiveButton = createThings.Button(image, self.width//2, 
+                                            2*self.height//3, 30, 30)
+        self.receiveButton.drawButton(surface)
+
     def drawReceiveWork(self, surface):
-        rectangle = (self.width//6, self.height//8, 
-                    self.width//6+400, self.height//8+200)
-        receiveWork = createThings.Item('workImage.png', self.width//6, 
-                                        self.height//8, 400, 200, 'work image')
-        receiveWork.drawItem(surface)
+        rectangle = (self.width//12, self.height//8, 
+                    5*self.width//6, 2*self.height//3)
+        pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
+        surface.fill((255, 255, 255), rectangle)
+        if self.showTask == None: #accepted a task alr
+            print('none show task')
+            self.receiveButton = None
+            font = pygame.font.SysFont('arial', 40, True)
+            text = font.render('Run to finish!', 1, (0, 0, 0))
+            surface.blit(text, (self.width//7, self.height//5))
+
+            if self.protagonist.onFlowerTask:
+                font = pygame.font.SysFont('arial', 30, True)
+                text = font.render('You have 5 seconds', 1, (0, 0, 0))
+                surface.blit(text, (self.width//8+30, self.height//3))
+            elif self.protagonist.onFileTask:
+                font = pygame.font.SysFont('arial', 30, True)
+                text = font.render('You have 10 seconds', 1, (0, 0, 0))
+                surface.blit(text, (self.width//8+30, self.height//3))
+        else:
+            font = pygame.font.SysFont('arial', 40, True)
+            text = font.render('Task Assigned', 1, (0, 0, 0))
+            surface.blit(text, (self.width//8+30, self.height//5))
+            font = pygame.font.SysFont('arial', 20, True)
+
+            text = font.render(f'Here is the {self.showTask} task:', 1, (0, 0, 0))
+            surface.blit(text, (self.width//8, self.height//3))
+            text = font.render(f"{self.tasksDict[self.showTask]['task']} in {self.tasksDict[self.showTask]['time']} seconds to earn ${self.tasksDict[self.showTask]['money']}", 1, (0, 0, 0))
+            surface.blit(text, (self.width//8, self.height//3 + 30))
+            text = font.render('Do you want to accept this task?', 1, (0, 0, 0))
+            surface.blit(text, (self.width//8, self.height//3 + 60))
+
+            font = pygame.font.SysFont('arial', 15, True)
+            text = font.render('You risk losing $200 if you do not complete task on time!', 1, (0, 0, 0))
+            surface.blit(text, (self.width//8, self.height//3+90))
+
+            self.drawReceiveButton(surface)
+
+        image = pygame.image.load('exitButton.png')
+        image = pygame.transform.scale(image, (10, 10))
+        self.exitWorkButton = createThings.Button(image, 0, 9*self.height//12, 20, 20)
+        self.exitWorkButton.drawButton(surface)
+
+    def receiveWork(self, surface):
+        if self.protagonist.onFileTask or self.protagonist.onFlowerTask: #already accept a certain task
+            self.showTask = None
+        elif self.showTask != None and not self.protagonist.onFileTask and not self.protagonist.onFlowerTask: #already have a certain task on display but have not accept yet
+            if self.showTask == 'flower':
+                taskName = 'flower'
+                self.drawReceiveWork(surface)
+                return
+            elif self.showTask == 'file':
+                taskName = 'file'
+                self.drawReceiveWork(surface)
+                return
+        elif self.showTask == None:
+            task = tasks.chooseTask() #randomly assigned a task
+            if task == 'flowerTask':
+                self.showTask = 'flower' #ready to be shown, not really accepted by player yet
+            elif task == 'fileTask':
+                self.showTask = 'file'
+        self.drawReceiveWork(surface)
 
     def redrawWorkWindow(self, workSurface, moveL, moveR, moveF, moveB):
+        self.exitWorkButton = None
         workBg = createThings.Background('workBg.png', 'workplace')
         #print('work bg:', workBg.name)
         workBg.drawBg(workSurface)
@@ -952,8 +1108,8 @@ class PlayGame(object):
         self.drawFixedItems(workSurface)
         self.drawProtagonist(workSurface, moveL, moveR, moveF, moveB)
 
-        if self.protagonist.isReceiveWork:
-            self.drawReceiveWork(workSurface)
+        if self.protagonist.isReceiveWork and not self.protagonist.exitWork: #walk up to the office desk
+            self.receiveWork(workSurface)
 
         pygame.display.update()
 
@@ -962,13 +1118,33 @@ class PlayGame(object):
         if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.workDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.workDesk.hitbox[0] + self.workDesk.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.workDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.workDesk.hitbox[1] + self.workDesk.hitbox[3])):
             self.protagonist.isReceiveWork, self.protagonist.isCollide = True, True
+        else:
+            self.protagonist.isCollide = False
+            self.protagonist.isReceiveWork = False
         if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.door.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.door.hitbox[0] + self.door.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.door.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.door.hitbox[1] + self.door.hitbox[3])):
             run = False
         return run
 
     def detectWorkMouseEvents(self, position):
-        return
+        if self.exitWorkButton != None and self.exitWorkButton.isClick(position):
+            self.protagonist.exitWork = True
+            self.protagonist.isReceiveWork = False
+        else:
+            self.protagonist.exitWork = False
+        
+        if self.receiveButton != None and self.receiveButton.isClick(position):
+            taskStartTime = self.timer
+            if self.showTask == 'flowerTask':
+                self.protagonist.onFlowerTask = True
+                self.taskStopTime = taskStartTime + 5
+                print('timer:', self.timer)
+                print('task stop time:', self.taskStopTime)
+            elif self.showTask == 'fileTask':
+                self.protagonist.onFileTask = True
+                self.taskStopTime = taskStartTime + 10
+                print('timer:', self.timer)
+                print('task stop time:', self.taskStopTime)
 
     def inWorkRunGame(self):
         workSurface = pygame.display.set_mode((self.width, self.height))
@@ -1000,6 +1176,8 @@ class PlayGame(object):
 
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
 
+            self.doExpense()
+            self.checkTimeForTask(workSurface)
             self.redrawWorkWindow(workSurface, moveL, moveR, moveF, moveB)
             run = self.workDetectCollision(run)
 
@@ -1023,27 +1201,99 @@ class PlayGame(object):
 
     def createHomeItems(self, surface):
         self.homeDesk = createThings.Item('workDesk.png', 11*self.width//13, 
-                                        11*self.height//14, 30, 60, 'home desk')
+                                        11*self.height//14, 80, 70, 'home desk')
+
+    def drawCheckExpense(self, font, surface):
+        text = font.render('Rental Fee + Other:', 1, (0, 0, 0))
+        surface.blit(text, (self.width//12, self.height//4))
+        text = font.render('                $800', 1, (0, 0, 0))
+        surface.blit(text, (self.width//12, self.height//4+30))
+        text = font.render('Student Loan:', 1, (0, 0, 0,))
+        surface.blit(text, (self.width//12, self.height//4+60))
+        text = font.render('                $1000', 1, (0, 0, 0,))
+        surface.blit(text, (self.width//12, self.height//4+90))
+        text = font.render('Total: ', 1, (0, 0, 0))
+        surface.blit(text, (self.width//12, self.height//4+120))
+        text = font.render('                $2500', 1, (0, 0, 0))
+        surface.blit(text, (self.width//12, self.height//4+150))
+
+    def drawCheckDeposit(self, font, surface):
+        startW = self.width//3
+        if self.protagonist.deposit == 0:
+            text = font.render('No deposit!', 1, (0, 0, 0))
+            surface.blit(text, (startW+30, self.height//3))
+            text = font.render('Save your money!', 1, (0, 0, 0))
+            surface.blit(text, (startW, self.height//2))
+        else:
+            text = font.render('Your deposit is: ', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4))
+            text = font.render(f'               ${self.protagonist.deposit}', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+30))
+            text = font.render('You deposited for:', 1, (0, 0, 0,))
+            surface.blit(text, (self.width//12, self.height//4+60))
+            text = font.render(f'               {self.monthForWithdraw} months', 1, (0, 0, 0,))
+            surface.blit(text, (self.width//12, self.height//4+90))
+            text = font.render('The current interest rate is：', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+120))
+            text = font.render(f'                {self.interest}', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+150))
+
+    def drawCheckTask(self, font, surface):
+        return
+
+    def drawCheckWindow(self, surface):
+        rectangle = (self.width//12, self.height//8, 
+                    5*self.width//6, 2*self.height//3)
+        pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
+        surface.fill((255, 255, 255), rectangle)
+        
+        font = pygame.font.SysFont('arial', 18, True) #titles
+
+        text = font.render('Monthly Expense', 1, (0, 0, 0))
+        surface.blit(text, (self.width//12, self.height//7))
+        text = font.render('Current Deposit', 1, (0, 0, 0))
+        surface.blit(text, (self.width//3, self.height//7))
+        text = font.render('Current Task', 1, (0, 0, 0))
+        surface.blit(text, (7*self.width//12, self.height//7))
+
+        font = pygame.font.SysFont('arial', 15, True)
+
+        self.drawCheckExpense(font, surface)
+        self.drawCheckDeposit(font, surface)
+        self.drawCheckTask(font, surface)
+
+    def drawFile(self, surface):
+        self.file = createThings.Item('file.png', self.width//10, 6*self.height//7-10, 
+                                        33, 20, 'file')
+        self.file.drawItem(surface)
+
+    def drawHomeItems(self, surface):
+        if self.protagonist.onFileTask:
+            self.drawFile(surface)
 
     def redrawHomeWindow(self, homeSurface, moveL, moveR, moveF, moveB):
         homeBg = createThings.Background('homeBg.png', 'home')
         homeBg.drawBg(homeSurface)
 
         self.createHomeItems(homeSurface)
+        self.drawHomeItems(homeSurface)
         self.drawProtagonist(homeSurface, moveL, moveR, moveF, moveB)
         self.drawWallet(homeSurface)
         self.drawInventory(homeSurface)
+
+        if not self.protagonist.exitCheck and self.protagonist.isCheckExpense:
+            self.drawCheckWindow(homeSurface)
 
         pygame.display.update()
 
     def homeDetectCollision(self, run):
         self.protagonist.isCollide = False
-        '''
-        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.workDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.workDesk.hitbox[0] + self.workDesk.hitbox[2])
-            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.workDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.workDesk.hitbox[1] + self.workDesk.hitbox[3])):
-            self.protagonist.isReceiveWork, self.protagonist.isCollide = True, True
-        '''
-        door = createThings.Item('door.png', self.width//3, 22*self.height//24, 
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.homeDesk.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.homeDesk.hitbox[0] + self.homeDesk.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.homeDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.homeDesk.hitbox[1] + self.homeDesk.hitbox[3])):
+            self.protagonist.isCheckExpense, self.protagonist.isCollide = True, True
+        else:
+            self.protagonist.isCheckExpense, self.protagonist.isCollide = False, False
+        door = createThings.Item('door.png', self.width//3, self.height-8, 
                                             80, 30, 'door')
         if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > door.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < door.hitbox[0] + door.hitbox[2])
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > door.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < door.hitbox[1] + door.hitbox[3])):
@@ -1074,9 +1324,13 @@ class PlayGame(object):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_h:
                         self.isHelp = True
+                    elif event.key == pygame.K_SPACE:
+                        self.isHelp = False
 
             #self.updateWebScraping()
 
+            self.doExpense()
+            self.checkTimeForTask(homeSurface)
             keys = pygame.key.get_pressed()
             (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
 
@@ -1100,6 +1354,91 @@ class PlayGame(object):
         self.protagonist.y = self.home.hitbox[1] + self.home.hitbox[3]
         return
 
+    def drawFlowers(self, surface):
+        self.redFlower = createThings.Item('redFlower.png', self.width//4, 
+                                        2*self.height//3-10, 33, 45, 'red flower')
+        self.flower1 = createThings.Item('flower1.png', 2*self.width//3, 
+                                        self.height//2+20, 33, 45, 'flower 1')
+        self.flower2 = createThings.Item('flower2.png', 3*self.width//4, 
+                                        7*self.height//8-20, 90, 40, 'flower 2')
+        self.redFlower.drawItem(surface)
+        self.flower1.drawItem(surface)
+        self.flower2.drawItem(surface)
+
+    def drawParkItems(self, surface):
+        if self.protagonist.onFlowerTask:
+            self.drawFlowers(surface)
+
+    def redrawParkWindow(self, surface, moveL, moveR, moveF, moveB):
+        parkBg = createThings.Background('parkBg.png', 'park')
+        parkBg.drawBg(surface)
+
+        self.drawParkItems(surface)
+        self.drawProtagonist(surface, moveL, moveR, moveF, moveB)
+
+        self.drawInventory(surface)
+        self.drawWallet(surface)
+
+        pygame.display.update()
+
+    def parkDetectCollision(self, run):
+        self.protagonist.isCollide = False
+        if self.redFlower != None and self.protagonist.onFlowerTask:
+            if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.redFlower.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.redFlower.hitbox[0] + self.redFlower.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.redFlower.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.redFlower.hitbox[1] + self.redFlower.hitbox[3])):
+                self.isTaskComplete, self.protagonist.isCollide = True, True
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.door.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.door.hitbox[0] + self.door.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.door.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.door.hitbox[1] + self.door.hitbox[3])):
+            run = False
+        return run
+
+    def inParkRunGame(self):
+        parkSurface = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption("Park")
+        clock = pygame.time.Clock()
+
+        run = True
+        while run:
+            clock.tick(15)
+
+            self.timerForExpense += 0.06666666666666666
+            self.timer += 0.06666666666666666
+            self.stockTimer += 0.06666666666666666
+
+            for event in pygame.event.get():
+                position = pygame.mouse.get_pos()
+
+                if event.type == pygame.QUIT:
+                    run = False 
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_h:
+                        self.isHelp = True
+
+            keys = pygame.key.get_pressed()
+            (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
+
+            self.checkDirectForCollision(moveL, moveR, moveF, moveB)
+
+            self.doExpense()
+            self.checkTimeForTask(parkSurface)
+            self.redrawParkWindow(parkSurface, moveL, moveR, moveF, moveB)
+            run = self.parkDetectCollision(run)
+
+            if self.isHelp:
+                self.runHelpPage()
+
+            if self.protagonist.money <= 0:
+                run = self.gameOver()
+                if run:
+                    self.protagonist.inPark = False
+                    self.protagonist.money = 20000
+                    return
+
+        self.protagonist.inPark = False
+        self.protagonist.x = self.park.hitbox[0] + self.park.hitbox[2] // 2
+        self.protagonist.y = self.park.hitbox[1] + self.park.hitbox[3]
+        return
+
     def detectAnotherPlace(self):
         if self.protagonist.inMarket:
             self.protagonist.x, self.protagonist.y = self.width//2, self.height//2
@@ -1113,6 +1452,9 @@ class PlayGame(object):
         elif self.protagonist.inHome:
             self.protagonist.x, self.protagonist.y = self.width//2, self.height//2
             self.inHomeRunGame()
+        elif self.protagonist.inPark:
+            self.protagonist.x, self.protagonist.y = self.width//2, self.height//2
+            self.inParkRunGame()
 
     def gameOver(self):
         overSurface = pygame.display.set_mode((self.width, self.height))
@@ -1227,6 +1569,8 @@ class PlayGame(object):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_h:
                         self.isHelp = True
+                    elif event.key == pygame.K_SPACE:
+                        self.isHelp = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     self.detectClickInvButton(position, stSurface)
 
@@ -1239,6 +1583,7 @@ class PlayGame(object):
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
                     
             self.doExpense()
+            self.checkTimeForTask(stSurface)
             self.redrawStreetWindow(stSurface, moveL, moveR, moveF, moveB)
 
             if self.isHelp:

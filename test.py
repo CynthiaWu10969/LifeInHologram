@@ -355,6 +355,9 @@ print(num)
 d = {'a':1, 'b':2, 'c':3}
 l = list(d.keys())
 print(l)
-'''
+
 d = {}
 print('a' in d)
+'''
+s = 'abc'
+print(s[0])

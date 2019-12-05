@@ -20,6 +20,7 @@ class Character(object):
         self.inventory = dict()
         self.exitBuy, self.exitSell, self.exitDeposit = False, False, False
         self.inWork, self.isReceiveWork = False, False
+        self.inHome = False
 
 class Background(object):
     def __init__(self, image, name):
@@ -54,6 +55,9 @@ class Item(object):
         self.name = name
         self.x, self.y = x, y
         self.hitbox = (self.x , self.y , width, height)
+
+    def drawHitbox(self, surface):
+        pygame.draw.rect(surface, (0, 0, 0), self.hitbox, 3)
 
     def drawItem(self, surface):
         surface.blit(self.image, (self.x, self.y))

@@ -78,7 +78,7 @@ class PlayGame(object):
         invImage = pygame.image.load('buyButton.png')
         self.invButton = createThings.Button(invImage, 0, 0, self.width//6, self.height//4, 'inv button')
         self.wholeData = webScraping.scraping() #list of dicts
-        self.stockData = self.wholeData[:6]
+        self.stockData = self.wholeData[:9]
         self.wholeStockDict = dict() # convert the stock data into a dict of dicts
         for stock in self.wholeData:
             self.wholeStockDict[stock['Symbol']] = stock
@@ -89,7 +89,10 @@ class PlayGame(object):
         self.taskStopTime = None
         self.isTaskComplete = False
         self.tasksDict = {'flower': {'money': 300, 'time': 5, 'task': 'Pick some red flowers'}, 
-                        'file': {'money': 300, 'time': 10, 'task': 'Gather a yellow folder'}}
+                        'file': {'money': 500, 'time': 10, 'task': 'Gather a yellow folder'}}
+        self.isReceive = False
+        self.allTasks = ['flowerTask', 'fileTask']
+        self.iterateTask = 0
 
     def redrawWholeInventory(self, surface):
         invBg = createThings.Background('invBg.png', 'inventory')
@@ -124,7 +127,6 @@ class PlayGame(object):
 
             invKeys = [0] #for spacing
             invKeys += list(self.protagonist.inventory.keys()) # stock symbols
-            #print('inv key:', invKeys)
             for j in range(len(stockInfo)): # draws the table for stocks
                 for i in range(len(invKeys)):
                     if i == 0:
@@ -179,8 +181,8 @@ class PlayGame(object):
                     pygame.image.load('L3.png'), pygame.image.load('L4.png')]
         walkFront = [pygame.image.load('F1.png'), pygame.image.load('F2.png'), 
                     pygame.image.load('F3.png'), pygame.image.load('F4.png')]
-        walkBack = [pygame.image.load('B1.png'), pygame.image.load('B2.png'), 
-                    pygame.image.load('B3.png'), pygame.image.load('B4.png')]
+        walkBack = [pygame.image.load('B1.png'), pygame.image.load('B1.png'), 
+                    pygame.image.load('B1.png'), pygame.image.load('B1.png')]
 
         #rescale every single spritesheet            
         for item in [walkRight, walkLeft, walkFront, walkBack]:
@@ -276,9 +278,7 @@ class PlayGame(object):
             stSurface.blit(item.image, (item.x, item.y))
 
     def doExpense(self):
-        #currentTime = pygame.time.get_ticks()
-        #print('time:', currentTime)
-        if self.timerForExpense >= 15:
+        if self.timerForExpense >= 100: #########################改这个################################
             self.protagonist.money -= 2500
             self.timerForExpense = 0
 
@@ -353,7 +353,7 @@ class PlayGame(object):
             direction = 'back'
         else:
             direction = None
-        #print("current moving direction: ", direction)
+        #("current moving direction: ", direction)
 
         if self.protagonist.isCollide:
             self.cancelMove(direction)
@@ -364,8 +364,9 @@ class PlayGame(object):
         
 
     def drawStockBuy(self, marketSurface):
+
         colDis = (5 * self.width // 6 - self.width // 12) // 6
-        rowDis = (2 * self.height // 3 - self.height // 8) // 6
+        rowDis = (2 * self.height // 3 - self.height // 8) // 7
 
         imageX = self.width // 12 + 2 * (5 * self.width//6 - self.width//12) // 5
         imageY = self.height//8
@@ -378,7 +379,7 @@ class PlayGame(object):
                     'Market Cap']
         
         for j in range(len(stockInfo)): # draws the table for stocks
-            for i in range(6):
+            for i in range(9):
                 if i == 0:
                     text = font.render(stockInfo[j], 1, (0, 0, 0))
                 else:
@@ -413,23 +414,17 @@ class PlayGame(object):
         image = pygame.transform.scale(image, (10, 10))
         self.exitBuyButton = createThings.Button(image, 0, 11*self.height//12, 20, 20)
         self.exitBuyButton.drawButton(surface)
-        '''
-        for i in range(len(self.stockData)):
-            button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((3*self.width//24 + colDis * 4, 2*self.height//8 + rowDis * i), 
-                                                                            (colDis, rowDis)), text='BUY', manager=self.manager)
-            self.buyButtons[self.stockData[i]['Symbol']] = button #key=symbol
-        '''
 
     def drawBuyWindow(self, marketSurface):
         rectangle = (self.width//12, self.height//8, 
-                    5*self.width//6, 2*self.height//3)
+                    5*self.width//6, 4*self.height//5)
         pygame.draw.rect(marketSurface, (0, 0, 0), rectangle, 5)
         marketSurface.fill((255, 255, 255), rectangle)
         self.drawStockBuy(marketSurface)
 
     def drawStockSell(self, marketSurface):
         colDis = (5 * self.width // 6 - self.width // 12) // 6
-        rowDis = (2 * self.height // 3 - self.height // 8) // 6
+        rowDis = (2 * self.height // 3 - self.height // 8) // 7
         self.createSellButtons(marketSurface, rowDis, colDis)
 
         imageX = self.width // 12 + 2 * (5 * self.width//6 - self.width//12) // 5
@@ -491,18 +486,12 @@ class PlayGame(object):
         image = pygame.transform.scale(image, (10, 10))
         self.exitSellButton = createThings.Button(image, 0, 11*self.height//12, 20, 20)
         self.exitSellButton.drawButton(surface)
-        '''
-        for i in range(len(self.stockData)):
-            button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((3*self.width//24 + colDis * 4, 2*self.height//8 + rowDis * i), 
-                                                                            (colDis, rowDis)), text='SELL', manager=self.manager)
-            self.sellButtons[self.stockData[i]['Symbol']] = button #key=symbol
-        '''
 
     def drawSellWindow(self, marketSurface):
         for stock in self.buyButtons:
             self.buyButtons[stock] = None
         rectangle = (self.width//12, self.height//8, 
-                    5*self.width//6, 2*self.height//3)
+                    5*self.width//6, 4*self.height//5)
         pygame.draw.rect(marketSurface, (0, 0, 0), rectangle, 5)
         marketSurface.fill((255, 255, 255), rectangle)
         self.drawStockSell(marketSurface)
@@ -556,6 +545,7 @@ class PlayGame(object):
         marketSurface.blit(marketBgImage, (0, 0))
 
         self.drawMarketItem(marketSurface)
+        self.drawFixedItems(marketSurface)
         self.drawProtagonist(marketSurface, moveL, moveR, moveF, moveB)
 
         if not self.protagonist.exitBuy and self.protagonist.isBuy:
@@ -563,7 +553,6 @@ class PlayGame(object):
         if not self.protagonist.exitSell and self.protagonist.isSell:
             self.drawSellWindow(marketSurface)
 
-        self.drawFixedItems(marketSurface)
         pygame.display.update()
 
     def marketDetectCollision(self, run):
@@ -595,8 +584,6 @@ class PlayGame(object):
             self.protagonist.inventory[stockSymbol] += 1
         else:
             self.protagonist.inventory[stockSymbol] = 1
-        #print("inventory: ", self.protagonist.inventory)
-        #print('current stock:', self.currentStock)
     #def marketErrorScreen(self):
 
     def sellStocks(self, targetStock):
@@ -748,7 +735,6 @@ class PlayGame(object):
         image = pygame.image.load('exitButton.png')
         image = pygame.transform.scale(image, (10, 10))
         self.exitDepositButton = createThings.Button(image, 0, 11*self.height//12, 20, 20)
-        self.exitDepositButton.drawButton(surface)
 
     def bankDetectCollision(self, run):
         self.protagonist.isCollide = False
@@ -772,10 +758,7 @@ class PlayGame(object):
 
         compoundInterest = 1 + self.interest / 100
         self.moneyForWithdraw = self.protagonist.deposit*compoundInterest**self.monthForWithdraw
-        self.depositTime = self.monthForWithdraw * 15 #correct in secs
-        #print('secs:', self.depositTime)
-        #print(self.moneyForWithdraw) 
-        ########################money correct############################
+        self.depositTime = self.monthForWithdraw * 15 #correct in seconds
 
         self.protagonist.money -= self.moneyForDeposit
         self.moneyForDeposit = 1000
@@ -821,16 +804,11 @@ class PlayGame(object):
             self.startDepositTime = self.timer
             self.startDeposit = pygame.time.get_ticks()
             self.createDeposit()
-        
-        #我他妈debug不出来啊我日
 
     def withdrawMoney(self):
         if self.depositTime == 0:
             return
         else:
-            #print('start deposit time: ', self.startDepositTime)
-            #print('timer: ', self.timer)
-            #对了
             if self.timer >= self.startDepositTime + self.depositTime:
                 self.protagonist.money += self.moneyForWithdraw
                 self.moneyForWithdraw = 0
@@ -844,12 +822,10 @@ class PlayGame(object):
 
         run = True
         while run:
-            #print("protagonist's in bank")
             clock.tick(15)
  
+            pygame.display.set_caption("Bank")
             self.withdrawMoney()
-
-            #self.updateWebScraping()
 
             self.timerForExpense += 0.06666666666666666
             self.timer += 0.06666666666666666
@@ -897,7 +873,7 @@ class PlayGame(object):
         if self.protagonist.isBuy or self.protagonist.isSell:
             if self.stockTimer >= 1:
                 self.wholeData = webScraping.scraping()
-                self.stockData = self.wholeData[:6]
+                self.stockData = self.wholeData[:9]
                 self.stockTimer = 0
 
     def inMarketRunGame(self):
@@ -907,10 +883,10 @@ class PlayGame(object):
 
         run = True
         while run:
-            #print("protagonist's in market")
             clock.tick(30)
             time = clock.tick(30)/1000
 
+            pygame.display.set_caption("Stock Market")
             self.updateWebScraping()
 
             for event in pygame.event.get():
@@ -1006,19 +982,19 @@ class PlayGame(object):
         if self.taskStopTime == None: # game is first initialized
             return
         else: 
-            if self.timer >= self.taskStopTime and not self.isTaskComplete:
-                print('timer:', self.timer)
-                print('task stop time: ', self.taskStopTime)
+            if self.taskStopTime != 0 and self.timer >= self.taskStopTime and not self.isTaskComplete: #fail the task
                 self.protagonist.onFlowerTask, self.protagonist.onFileTask = False, False
                 self.protagonist.money -= 200
                 self.drawTaskFailed(surface)
-            else:
+                self.taskStopTime = 0 
+            elif self.taskStopTime != 0 and self.timer <= self.taskStopTime and self.isTaskComplete: #complete the task
                 self.taskStopTime = 0
                 if self.protagonist.onFlowerTask:
                     self.protagonist.money += 300
                 elif self.protagonist.onFileTask:
                     self.protagonist.money += 500
                 self.drawTaskComplete(surface)
+                self.taskStopTime = 0 
 
     def createWorkItems(self):
         self.workDesk = createThings.Item('workDesk.png', self.width//10, 
@@ -1039,11 +1015,10 @@ class PlayGame(object):
                     5*self.width//6, 2*self.height//3)
         pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
         surface.fill((255, 255, 255), rectangle)
-        if self.showTask == None: #accepted a task alr
-            print('none show task')
+        if self.protagonist.onFlowerTask or self.protagonist.onFileTask: #accepted a task already
             self.receiveButton = None
             font = pygame.font.SysFont('arial', 40, True)
-            text = font.render('Run to finish!', 1, (0, 0, 0))
+            text = font.render('Rush to finish!', 1, (0, 0, 0))
             surface.blit(text, (self.width//7, self.height//5))
 
             if self.protagonist.onFlowerTask:
@@ -1076,11 +1051,25 @@ class PlayGame(object):
         image = pygame.image.load('exitButton.png')
         image = pygame.transform.scale(image, (10, 10))
         self.exitWorkButton = createThings.Button(image, 0, 9*self.height//12, 20, 20)
-        self.exitWorkButton.drawButton(surface)
+
+    def drawNoWork(self, surface):
+        rectangle = (self.width//12, self.height//8, 
+                    5*self.width//6, 2*self.height//3)
+        pygame.draw.rect(surface, (0, 0, 0), rectangle, 5)
+        surface.fill((255, 255, 255), rectangle)
+
+        font = pygame.font.SysFont('arial', 35, True)
+        text = font.render('OOPS, no work left...', 1, (0, 0, 0))
+        surface.blit(text, (self.width//4, self.height//5))
+
+        font = pygame.font.SysFont('arial', 20, True)
+        text = font.render('Find some other ways to earn money!', 1, (0, 0, 0))
+        surface.blit(text, (self.width//7, self.height//3))
 
     def receiveWork(self, surface):
         if self.protagonist.onFileTask or self.protagonist.onFlowerTask: #already accept a certain task
             self.showTask = None
+            self.drawReceiveWork(surface)
         elif self.showTask != None and not self.protagonist.onFileTask and not self.protagonist.onFlowerTask: #already have a certain task on display but have not accept yet
             if self.showTask == 'flower':
                 taskName = 'flower'
@@ -1090,18 +1079,23 @@ class PlayGame(object):
                 taskName = 'file'
                 self.drawReceiveWork(surface)
                 return
+            self.drawReceiveWork(surface)
         elif self.showTask == None:
-            task = tasks.chooseTask() #randomly assigned a task
-            if task == 'flowerTask':
-                self.showTask = 'flower' #ready to be shown, not really accepted by player yet
-            elif task == 'fileTask':
-                self.showTask = 'file'
-        self.drawReceiveWork(surface)
+            if self.iterateTask > 1:
+                self.drawNoWork(surface)
+                return
+            else:
+                task = self.allTasks[self.iterateTask] #randomly assigned a task
+                if task == 'flowerTask':
+                    self.showTask = 'flower' #ready to be shown but not accepted by player yet
+                elif task == 'fileTask':
+                    self.showTask = 'file'
+                self.iterateTask += 1
+                self.drawReceiveWork(surface)
 
     def redrawWorkWindow(self, workSurface, moveL, moveR, moveF, moveB):
         self.exitWorkButton = None
         workBg = createThings.Background('workBg.png', 'workplace')
-        #print('work bg:', workBg.name)
         workBg.drawBg(workSurface)
 
         self.drawWorkItems(workSurface)
@@ -1135,16 +1129,13 @@ class PlayGame(object):
         
         if self.receiveButton != None and self.receiveButton.isClick(position):
             taskStartTime = self.timer
-            if self.showTask == 'flowerTask':
+            self.isReceive = True
+            if self.showTask == 'flower': #entered here
                 self.protagonist.onFlowerTask = True
                 self.taskStopTime = taskStartTime + 5
-                print('timer:', self.timer)
-                print('task stop time:', self.taskStopTime)
-            elif self.showTask == 'fileTask':
+            elif self.showTask == 'file':
                 self.protagonist.onFileTask = True
                 self.taskStopTime = taskStartTime + 10
-                print('timer:', self.timer)
-                print('task stop time:', self.taskStopTime)
 
     def inWorkRunGame(self):
         workSurface = pygame.display.set_mode((self.width, self.height))
@@ -1154,6 +1145,8 @@ class PlayGame(object):
         run = True
         while run:
             clock.tick(15)
+
+            pygame.display.set_caption("Workplace")
 
             self.timerForExpense += 0.06666666666666666
             self.timer += 0.06666666666666666
@@ -1196,12 +1189,11 @@ class PlayGame(object):
         self.protagonist.y = self.workplace.hitbox[1] + self.workplace.hitbox[3]
         return
 
-    def detectHomeMouseEvents(self, position):
-        return
-
     def createHomeItems(self, surface):
         self.homeDesk = createThings.Item('workDesk.png', 11*self.width//13, 
                                         11*self.height//14, 80, 70, 'home desk')
+        self.file = createThings.Item('file.png', self.width//10, 6*self.height//7-10, 
+                                        33, 20, 'file')
 
     def drawCheckExpense(self, font, surface):
         text = font.render('Rental Fee + Other:', 1, (0, 0, 0))
@@ -1220,8 +1212,10 @@ class PlayGame(object):
     def drawCheckDeposit(self, font, surface):
         startW = self.width//3
         if self.protagonist.deposit == 0:
+            font = pygame.font.SysFont('arial', 18, True)
             text = font.render('No deposit!', 1, (0, 0, 0))
             surface.blit(text, (startW+30, self.height//3))
+            font = pygame.font.SysFont('arial', 15, True)
             text = font.render('Save your money!', 1, (0, 0, 0))
             surface.blit(text, (startW, self.height//2))
         else:
@@ -1239,7 +1233,40 @@ class PlayGame(object):
             surface.blit(text, (self.width//12, self.height//4+150))
 
     def drawCheckTask(self, font, surface):
-        return
+        startW = 7*self.width//12
+        if not self.isReceive:
+            font = pygame.font.SysFont('arial', 18, True)
+            text = font.render('No Task Currently.', 1, (0, 0, 0))
+            surface.blit(text, (startW+5, self.height//3))
+            font = pygame.font.SysFont('arial', 15, True)
+            text = font.render('(Go to workplace!!!)', 1, (0, 0, 0))
+            surface.blit(text, (startW, self.height//2))
+        elif self.protagonist.onFileTask:
+            text = font.render('Your current task is: ', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4))
+            text = font.render('               File Task', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+30))
+            text = font.render('The total time is:', 1, (0, 0, 0,))
+            surface.blit(text, (self.width//12, self.height//4+60))
+            text = font.render('               10 seconds', 1, (0, 0, 0,))
+            surface.blit(text, (self.width//12, self.height//4+90))
+            text = font.render('You can earn up to：', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+120))
+            text = font.render('                $500', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+150))
+        elif self.protagonist.onFlowerTask:
+            text = font.render('Your current task is: ', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4))
+            text = font.render('                Flower Task', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+30))
+            text = font.render('The total time is:', 1, (0, 0, 0,))
+            surface.blit(text, (self.width//12, self.height//4+60))
+            text = font.render('                5 seconds', 1, (0, 0, 0,))
+            surface.blit(text, (self.width//12, self.height//4+90))
+            text = font.render('You can earn up to：', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+120))
+            text = font.render('                $300', 1, (0, 0, 0))
+            surface.blit(text, (self.width//12, self.height//4+150))
 
     def drawCheckWindow(self, surface):
         rectangle = (self.width//12, self.height//8, 
@@ -1262,14 +1289,9 @@ class PlayGame(object):
         self.drawCheckDeposit(font, surface)
         self.drawCheckTask(font, surface)
 
-    def drawFile(self, surface):
-        self.file = createThings.Item('file.png', self.width//10, 6*self.height//7-10, 
-                                        33, 20, 'file')
-        self.file.drawItem(surface)
-
     def drawHomeItems(self, surface):
         if self.protagonist.onFileTask:
-            self.drawFile(surface)
+            self.file.drawItem(surface)
 
     def redrawHomeWindow(self, homeSurface, moveL, moveR, moveF, moveB):
         homeBg = createThings.Background('homeBg.png', 'home')
@@ -1292,7 +1314,10 @@ class PlayGame(object):
             and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.homeDesk.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.homeDesk.hitbox[1] + self.homeDesk.hitbox[3])):
             self.protagonist.isCheckExpense, self.protagonist.isCollide = True, True
         else:
-            self.protagonist.isCheckExpense, self.protagonist.isCollide = False, False
+            self.protagonist.isCheckExpense = False
+        if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > self.file.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < self.file.hitbox[0] + self.file.hitbox[2])
+            and (self.protagonist.hitbox[1] + self.protagonist.hitbox[3] > self.file.hitbox[1] and self.protagonist.hitbox[1] + self.protagonist.hitbox[3] < self.file.hitbox[1] + self.file.hitbox[3])):
+            self.isTaskComplete, self.protagonist.isCollide = True, True
         door = createThings.Item('door.png', self.width//3, self.height-8, 
                                             80, 30, 'door')
         if ((self.protagonist.hitbox[0] + self.protagonist.hitbox[2] > door.hitbox[0] and self.protagonist.hitbox[0] + self.protagonist.hitbox[2] < door.hitbox[0] + door.hitbox[2])
@@ -1309,6 +1334,8 @@ class PlayGame(object):
         while run:
             clock.tick(15)
  
+            pygame.display.set_caption("Home")
+
             self.timerForExpense += 0.06666666666666666
             self.timer += 0.06666666666666666
             self.stockTimer += 0.06666666666666666
@@ -1401,6 +1428,7 @@ class PlayGame(object):
         while run:
             clock.tick(15)
 
+            pygame.display.set_caption("Park")
             self.timerForExpense += 0.06666666666666666
             self.timer += 0.06666666666666666
             self.stockTimer += 0.06666666666666666
@@ -1554,8 +1582,8 @@ class PlayGame(object):
         run = True
         while run:
             clock.tick(15)
-            #print('protagonist''s in st')
 
+            pygame.display.set_caption("Main Street")
             #update both timer
             self.timerForExpense += 0.06666666666666666
             self.timer += 0.06666666666666666
@@ -1579,7 +1607,6 @@ class PlayGame(object):
             keys = pygame.key.get_pressed()
             (moveL, moveR, moveF, moveB) = self.detectKeyPressed(keys)
             self.detectCollision()
-            #print('is it colliding: ', self.protagonist.isCollide)
             self.checkDirectForCollision(moveL, moveR, moveF, moveB)
                     
             self.doExpense()

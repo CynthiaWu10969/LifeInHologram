@@ -12,6 +12,7 @@ Libraries:
 The library used in this game that need to be installed on the computer are pygame and BeautifulSoup. To install these two, simply put following two commands in your terminal respectively:
 
 python3 -m pip install -U pygame --user
+
 pip install beautifulsoup4
 
 There are also other libraries that are used but do not need to be installed. These include random and requests.
